@@ -1,0 +1,63 @@
+\section{Accuracy of FEVER}
+\label{sec:evaluation}
+
+The extraction of feature related changes is based on heuristics, and assumptions about the structure of the modified artefacts.
+Inside the Linux kernel code itself, there are various ways of defining  a conditionally compiled block fragments, 
+and more than one syntax to declare a feature as Boolean.
+The assess the accuracy of the extraction process, evaluating whether the data captured by FEVER  is a 
+reflection of the changes performed by developers on the different artefacts,
+we manually inspect a sample of commits and compare what we can observe
+using textual differencing tool (Git and GitK) against the change description provided by FEVER.
+In order to measure the accuracy of FEVER, we record the precision and recall of all change attributes in addition to 
+the ability of FEVER to detect that the changes across artefacts are aggregated correctly by feature.
+
+We evaluate the correctness of the data as follows: 
+we consider that a change captured by FEVER is a \textit{true positive} if we can observe the change attribute by manual analysis.
+A change is a \textit{false positive} if FEVER report a change that we cannot observe by manual inspection.
+A \textit{false negative} is accounted for when FEVER fails to identify a change that we can observe in the text difference.
+We do not report \textit{true negative}.
+Commits can be complex, and changes not necessarily easy to understand during the manual review.
+Any ambiguities in the review process is resolved by considering the output of FEVER as wrong. 
+This ensures that the measured precision and recall reported in this paper are an under-estimation the capabilities of 
+our prototype implementation.
+
+\subsection{Validated change attributes: what and how?}
+This section list the characteristics of the changes we extract and the mean we use to validate them
+
+At a feature model level, the changes to features are checked against the content of the Kconfig files which can be found in each commit.
+This includes the nature of the VM change (addition, removal, modification), as well as the characteristics of the feature itself: 
+visibility, optionality and type.
+
+Regarding mapping changes, we can validate FEVER's data by looking at modified Makefile in the commit.
+We can check the nature of the touched features, the nature of the asset mapped to them (folder, compilation unit, or compilation flag).
+When the feature mapping is changed, we use file change provided by GitK to determine whether the mapped artefacts are pre-existing, new or deleted.
+
+For file changes, the information contained within commit is unlikely to be sufficient if the associate makefiles are not themselves modified.
+In such cases, we checkout the entire code base as it was before the commit and search for the mapping of that file to features in the existing (unmodified) makefiles.
+Remember that if a file is touched and its associated Makefile is not, FEVER does not know at a commit level which feature own the file and refers to the ``release''"'' level mapping table.
+This is important, as we first use the mapping as we observe it at the beginning of the extraction period.
+Then, as we move through commits to regroup related changes, we update that mapping with the mapping edits captured during the commit change extraction.
+This means that the path we take through git commits will influence our ability to capture changes to files for which the mapping is not touched in the same commit.
+Various updates of the mapping in different branches might lead to a drift in our mapping table.
+For this reason, we check the feature-file mapping as recorded by FEVER against the most relevant mapping possible: the Makefile as they are when a file is touched.
+
+We record the accuracy in terms of interaction changes (changes to \#ifdef statements) by looking a code diffs.
+We capture ``diffs hunks'' and assign them to code blocks or file. By looking at the textual diff of source code, we can 
+know if FEVER correctly assigned as code diff to the proper code block (or file).
+
+Interactions are modified when complete \#ifdef blocks are changed. We then manually inspect 
+the change within those code blocks to check that we correctly determined if it was completely new, totally removed, partially changed or preserved throughout the change.
+
+The changes to feature references are done by ``code-blocks''. Adding a reference to a feature that was already referenced in that block is not captured by FEVER. 
+For this reason, we consider changes to be accurately captured by FEVER if we can spot in the code textual diff the addition of reference to feature that where not referenced before.
+Similarly, the removal of reference is accounted for when the last reference to a feature is removed in a code block, or file.
+
+Code diff analysis, ie defining how many diff chunks are assigned to each block or file and the validity of their content,
+is sensible to a number of parameters. The text differencing algorithm used, the size of the context for each chunk as well as 
+accounting for whitespace changes or not will modify the resulting chunks in nature and number. 
+We use the HISTOGRAM algorithm with zero lines of context and ignoring white space changes. Using other parameters
+would results in other code change to block or file assignations, in some cases, the difference can be major.
+
+
+Finally, we check that feature-oriented change includes all the relevant changes in the commit. This operation is done per feature involve in the commit.
+If, for a given feature, the change to the VM and one file is properly matched, but we miss a reference to a third change, then the ``feature-oriented change aggregation'' is considered to have failed.

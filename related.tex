@@ -1,0 +1,61 @@
+\section{Related Work}
+\label{sec:related}
+
+Variability implementation in highly-configurable systems has been extensively studied in the past \citep{thum_classification_2014}.
+Our approach relies on extraction and consolidation of variability evolution across the different variability spaces.
+While many approaches can be found to analyze features in each individual space,
+few focus on their detailed evolution or the consolidation of such changes.
+
+The evolution of variability models was studied in the past as a mean to obtain insights 
+on the evolution of the system as a whole \citep{lotufo_evolution_2010},
+or manage the impact of changes to the system's capabilities \citep{heider_case_2012,schaefer_evaluating_2015}.
+In our previous work \citep{dintzner_analysing_2015}, we introduced FMDiff, an approach to extract feature model changes, that inpsired us for the extraction of variability model changes.
+
+To capture the evolution of features, we need to track the evolution of their mapping.
+Studies focusing on co-evolution of artefacts \citep{passos_coevolution_2015,neves_safe_2015} also place the 
+mapping as a central element in the description of feature evolution.
+As shown by Adams et al. \citep{adams_evolution_2008} in the Linux kernel, the build system
+evolves: the size and complexity of the build scripts increase over time, thus highlighting the relevance
+of build system evolution in the overall evolution of such highly configurable system.
+
+Several studies present methods to extract variability information from build systems (Makefiles) \citep{dietrich_robust_2012,zhou_extracting_2015,nadi_mining_2014}.
+Such approaches are designed to study the current state of the system, and rely on a complete description of the system.
+In this study, we took a different approach: FEVER focuses on changes performed on individual changed files.
+We developed a custom Makefile parser allowing us to extract information relying on modified artefacts only.
+Similarly to Nadi et al. \citep{nadi_mining_2014} and Dietrich et al. \citep{dietrich_robust_2012} we rely on parsing rather than symbolic execution as was done by Zhou et al. \citep{zhou_extracting_2015}.
+
+Variability implementations using annotative methods in source files were also studied in the past \citep{liebig_scalable_2013}, often for error detection \citep{kenner_typechef:_2010,tartler_dead_2009,tartler_feature_2011}.
+In this study, we used the approach presented in \citep{liebig_analysis_2010} to identify code blocks and their conditions, and we then relied on 
+this representation to build a model of implementation assets.
+
+The variability model of a system, the mapping between features and assets, and variability support inside the implementation
+can all be supported by different technologies.
+In the eCos environment,\footnote{CDL Language: http://ecos.sourceware.org/docs-1.3.1/cdl/language.properties.html} 
+assets associated with features are directly included in the 
+variability modeling language (CDL) specification.
+The Puppet\footnote{Puppet : https://puppet.com/} infrastructure offers a practical way of decoupling configuration
+and implementation \citep{sharma_does_2016}.
+Variability support at an implementation level can also be performed in a number of ways \citep{kastner_integrating_2008}.
+The FEVER approach does not encompass of possible ways of supporting variability in software system.
+However, this indicates that FEVER could be extended to be applied to a wide range of systems. 
+
+Only few studies focused on the co-evolution of artefacts in all three variability spaces: variability model (VM), mapping, and implementation.
+Neves et al. \citep{neves_safe_2015} describe the core elements involved in feature changes (VM, mapping, and assets).
+A collection of 23 co-evolution patterns is presented by Passos et al. \citep{passos_coevolution_2015}. 
+Each pattern describes a combination of changes that occur in the three variability spaces.
+These papers aimed at identifying common change operations and relied on manual analysis of commits.
+The approach proposed by Passos et al. relies on scripts to identify commits in which features in the Linux kernel are added and removed, and retrieve related information such as
+information regarding commits, name of the changed features, feature hierarchy, and the associated Linux release.
+From this initial information, extensive manual work is necessary to analyze changes of each type of artefacts, and their relationships.
+In comparison, the FEVER approach automatically extracts feature-related information from Kconfig file changes but also performed feature-related information extraction from other artefacts, such as Makefile and source files. While such information was 
+taken into account during the manual analysis performed in the context of \citep{passos_coevolution_2015}, FEVER makes such information readily available.
+For instance, using FEVER, one can know using the extracted if a feature-change in a Makefile is related to a feature change in the Kconfig file.
+
+Change consolidation across heterogeneous artefacts has been a long standing challenge.
+For instance, Begel et al. proposed a large database aggregating code level information, people, and work items \citep{begel_codebook:_2010}.
+We take a different approach, and propose to extract more detailed information focusing on implementation artefacts only.
+Recently, Passos et al. created a database of feature addition and removal \citep{passos_dataset_2014} in the Linux kernel.
+We extend this work by extracting detailed changes on \emph{all} commits and provide such descriptions on \emph{all} types of artefacts.
+The FEVER dataset is, to the best of our knowledge, the first dataset providing a consolidated view of complex feature changes
+across the variability, mapping, and implementation space.
+

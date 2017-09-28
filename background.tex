@@ -1,0 +1,115 @@
+%intro
+
+\section{Background}
+\label{sec:background}
+
+
+In this section, we present how variability is supported in the Linux kernel, the different artefacts involved in its realization
+and their relationships.
+
+\subsection{Variability Model} 
+A variability model (VM) formalizes the available configuration options (which we assimilate to ``features'' in this work) of a system as well as their allowed configurations \citep{kang_feature-oriented_1990}.
+In the context of the Linux kernel, the VM is expressed in the Kconfig language.
+An example of a feature in the Kconfig language is shown in \listingref{listing_kconfig}.
+Features have at least a name (following the ``config'' keyword on line 3) and a type. 
+The ``type'' attribute specifies what kind of values can be associated with a feature, which may be ``boolean'' (selected or not), 
+``tristate'' (selected, selected but compiled as a module, or not selected), or a value (when the type is ``int'', ``hex'', or ``string''). 
+In our example, the SQUASHFS\_FILE\_DIRECT feature is of type \textit{boolean} (line 2).
+In the remainder of this work, we will refer to Boolean and tristate features simply as ``Boolean features'', while features with type ``int'', ``hex'', or ``string'', will be referred to as ``value-based features''.
+The text following the type on line 3 is the ``prompt'' attribute. Its presence indicates that the feature is visible to the end user during the configuration process. 
+Features can also have default values. In our example the feature is selected by default (\textit{y} on line 4).
+The default value might be conditioned by an ``if'' statement. 
+
+\begin{sloppypar}
+Kconfig expresses feature dependencies using the ``depends on'' statements (see line 5). 
+If the expression is satisfied, the feature becomes selectable during the configuration process. In this example, the feature SQUASHFS must be selected.
+Reverse dependencies are declared using the ``select'' statement. 
+If the feature is selected then the target of the ``select'' will be selected automatically as well (ZLIB\_INFLATE is the target of the ``select'' statement on line 6).
+The selection occurs if the expression in the following ``if'' statement is satisfied by the current feature selection (\eg if SQUASHFS\_ZLIB is already selected).
+
+In the context of this study, we consider additions and removals of features as well as modifications of existing ones 
+\ie modifications of any attributes of a feature.
+
+\end{sloppypar}
+\vspace{-.5ex}
+\begin{lstlisting}[caption=A feature declaration in Kconfig,label=listing_kconfig,language=diff]
+config SQUASHFS_FILE_DIRECT
+	 bool 
+	 prompt "Decompress files in page cache"
+	 default y
+	 depends on SQUASHFS
+	 selects ZLIB_INFLATE if SQUASHFS_ZLIB
+	 help
+	   Decompress file data in page cache.
+\end{lstlisting}
+\vspace{-.5ex}
+To create a new kernel image, an end-user uses a configurator tool (``menuconfig'' for instance)
+which reads the variability model, and presents the features to the user in a tree like structure.
+At the end of the configuration process, a list of selected features is passed on to the build system 
+which uses it to select artefacts and artefact fragments to include in the image before compiling them.
+
+\subsection{Feature-Asset Mapping}
+The mapping between features and assets determines which assets should be included in a product upon the selection of specific features.
+In highly-configurable systems, the assets could be source code, documentation, or any other type of resources (\eg images).
+In the context of this study, we consider the following types of assets : implementation artefacts (\ie source files), data artefacts (\ie hardware description files), folders, and compilation flags.
+The addition of the mapping between a feature and code in a Makefile, as performed in the Linux kernel, 
+is presented in \listingref{listing_makefile}.
+In this example, the mapping is done between features and object files (but may link source code directly on occasion).
+We use the relationship between object files and source files to identify the mapped source file.
+
+Upon feature selection, the name of the feature used in the Makefile (symbol prefixed with CONFIG\_) will be replaced by its value. 
+As a result, the compilation units (``.o'' files) will be added to different lists 
+``obj-y'', ``obj-n'', and ``obj-m'' (for modules), based on the value of the macros CONFIG\_SQUASHFS\-\_FILE\_DIRECT.
+Compilation units added to the list ``obj-y'' are compiled into the kernel image while those in ``obj-m'' are compiled as external modules, 
+and objects in ``obj-n'' are not compiled.
+
+Alternatively, a developer may chose to directly include ``obj-y'' list in his Makefile, in which case, 
+the content of the list will be included in the compilation process as soon as the Makefile is included in the build process.
+The inclusion of a Makefile in the build process may be subject to feature selection, via conditional inclusion, or more complex mechanism relying on variables and file path reconstruction.
+\vspace{-.5ex}
+\begin{lstlisting}[caption=Mapping between features and assets as performed in the Linux kernel,label=listing_makefile,language=diff] 
++ obj-$(CONFIG_SQUASHFS_FILE_DIRECT) += 
++	      file_direct.o page_actor.o
+\end{lstlisting}
+\vspace{-.5ex}
+The language used to describe the mapping and implement the compilation process is a complete programming language, and the
+exact mapping between feature and assets can be very complex. 
+Makefiles are organized in a hierarchy, and constraints from one may affect others, leading to complex presence conditions for artefacts.
+
+\subsection{Assets}
+
+\begin{sloppypar}
+Many types of assets exists, such as images, code, or documentation. We consider only configurable implementation assets (source files).
+We focus specifically on pre-processor based variability implementation (using \#ifdef statements), which, 
+despite known limitations\citep{spencer_ifdef_1992}, is still widely used today \citep{liebig_analysis_2010}.
+An example of an addition of a pre-processor statement is presented in Listing \ref{listing_ifdef} 
+where feature SQUASHFS\_FILE\_DIRECT is used to condition the compilation of two code blocks, 
+one pre-existing (line 2 to 7) and a new one (lines 9 to 13).
+As a result, based on the selection of the feature SQUASHFS\_FILE\_DIRECT during the configuration phase, only one of the two code blocks
+will be included in the final product.
+\end{sloppypar}
+\vspace{-.5ex}
+\begin{lstlisting}[caption=Creating an \#ifdef block in Linux,label=listing_ifdef,language=diff] 
++ #ifndef CONFIG_SQUASHFS_FILE_DIRECT
+ static inline void *squashfs_first_page
+ 			(struct squashfs_page_actor *actor)
+ {
+ 	return actor->page[0];
+ }
++ #else
++ static inline void *squashfs_next_page
++			(struct squashfs_page_actor *actor)
++ {
++	return actor->squashfs_next_page(actor);
++ }
++ #endif
+\end{lstlisting}
+\vspace{-.5ex}
+Value-based features will be referenced in the implementation, acting as a place-holder for a value defined during the configuration process,
+as shown in Listing \ref{listing_value}.
+\vspace{-.5ex}
+\begin{lstlisting}[caption=Referencing to a value feature where the variable DSL will take the value associated with feature DE2104X\_DSL,label=listing_value] 
+#define DSL  CONFIG_DE2104X_DSL
+\end{lstlisting}
+\vspace{-.5ex}
+

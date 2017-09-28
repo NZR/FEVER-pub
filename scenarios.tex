@@ -1,0 +1,181 @@
+%intro
+
+\section{FEVER usage scenarios}
+\label{sec:in_practice}
+In this section, we illustrate how using FEVER or the data collected using the approach can be of use 
+to developers, maintainers and researchers in the scenarios \textbf{S1} to \textbf{S4} mentioned in the \secref{sec:Introduction}.
+
+The FEVER data is stored in a Neo4j graph database.\footnote{http://neo4j.com/} 
+Every entity of the FEVER change meta-model is a node of the graph, and the relationships are edges.
+Data types are represented using node labels, and attributes are stored as node properties.
+The queries presented in this section are written in the Cypher query language.\footnote{http://neo4j.com/docs/stable/cypher-query-lang.html}
+It is understood that, in a practical situation, an integration with development tools would be more suitable than 
+relying on direct Cypher queries.
+
+\subsection{FEVER for Software Development Activities}
+
+In scenario \textbf{S1}, we consider the work of a release manager
+building the release notes. He is interested in highlighting important features, 
+and matching those to the commits that participated in their implementation.
+The release notes of Linux v3.13 \footnote{http://kernelnewbies.org/Linux\_3.13}
+mention the following change ``add[s] option to disable kernel compression'' with a single commit.
+Looking at the commit, we know that a new configuration option named ``KERNEL\_\-UNCOMPRESSED'' is introduced.
+We can check this with FEVER by querying the commits 
+associated with the \textbf{TimeLine} of ``KERNEL\_\-UNCOMPRESSED'' as follows:
+\vspace{-.5ex}
+\begin{verbatim}
+match 
+(t:TimeLine)-[]->()<-[]-(c:commit)
+where t.name = "KERNEL_UNCOMPRESSED"
+return distinct c; 
+\end{verbatim}
+\vspace{-.5ex}
+This query returns two commits. The first commit (id:69f055) mentioned in the release note
+is associated with a \textbf{FeatureEdit} entity denoting the addition of a feature.
+The second commit (id:2d3c62), occurring a few days later, is also associated with a \textbf{FeatureEdit} entity, but, surprisingly, \emph{removes} the feature.
+A check in release v3.14 showed that the feature was never re-introduced. This means that the release notes written by the 3.14 release managers were, in fact, incorrect.
+We argue that a dataset such as FEVER would provide release manager with more accurate information on changes that were performed by developers and may have prevented this erroneous entry in the release notes.
+
+In scenario \textbf{S2}, a developer is about to introduce a new driver for a touch-screen 
+supporting the power management ``SLEEP'' feature.
+The developer might want to know how such support was implemented in other drivers and compare it with its own implementation.
+Using FEVER, he queries the database for commits where a new feature (f1) is added (fe.change =``ADDED''),
+and interacts with a second feature (f2) whose name is ``PM\_\-SLEEP'' as follows:
+\vspace{-.5ex}
+\begin{verbatim}
+match (f1:TimeLine)-[:FEATURE_CORE_UPDATE]->
+             (fe:FeatureEdit)<-[]-(c:commit),
+ (c)-[]->()<-[:FEATURE_INFLUENCE_UPDATE]-(f2:TimeLine)    
+where f2.name = ``PM_SLEEP''  and fe.change = ``ADDED''
+return f1,f2, distinct c;
+\end{verbatim}
+\vspace{-.5ex}
+
+When ran against database containing commits of release 3.14 of the Linux kernel, this query returns ten results, giving the name of the
+newly introduced features, and the commits in which those changes occurred.
+Among the results, the developer might notice that feature ``TOUCHSCREEN\_ZFORCE''
+and might consider using this as an example to drive his own development.
+
+In this scenario, FEVER is used as a ``recommender'' system to guide the implementation of a new component.
+Relying on previous activities to guide further development is a common approach to ease software evolution.
+We can name Hipikat \citep{cubranic_hipikat:_2003}, CodeBook \citep{begel_codebook:_2010} as tools aiming for such facilities.
+However, such approaches do not take into account the deep structure of the implementation
+which FEVER does by breaking artefact changes by feature.
+This degree of granularity is particularly interesting for variant-rich system.
+For such scenarios, we believe that the information obtained by FEVER would be a valuable addition to existing approaches such as CodeBook,
+rather than a replacement.
+
+
+FEVER can also be of use in our third scenario \textbf{S3} in the context of bug triaging.
+Let us consider the bug \#928561 reporting issues with keyboards mentioning that ``\textit{multimedia and macro keys are not working}''.\footnote{https://bugzilla.redhat.com/show\_bug.cgi?id=928561}
+The bug report author provide traces and logs pointing to issues with the Linux Human Interface Devices (HID) subsystem.
+This issue was fixed by and the patch was introduced in the  kernel in release 3.12.
+In the FEVER database for release 3.12, we run the following query to see who among the commit authors committed
+the most changes affecting HID related features.
+\vspace{-.5ex}
+\begin{verbatim}
+match (c:Commit)-->()<--(t:TimeLine)
+	where t.name=~"(?ism).*HID.*" 
+	return distinct (c.author), count(c) 
+	order by count(c) desc;
+\end{verbatim}
+\vspace{-.5ex}
+The name of the developer who analyzed and fixed the issue comes first in the results, with 22 commits affecting ``*HID*'' features - 
+among which one corresponds to the patch fixing  the keyboard issue.
+In second place, we find an official maintainer for three of kernel subsystems with  17 commits, followed by another official maintainer 
+for two HID related subsystems and the name of a Linux branch manager with 16 commits each affecting such features.
+It is interesting to note that the names of the developers who fixed the issue in question 
+are not present in the official maintainers list of the kernel for releases 3.11 nor 3.12. 
+Through this scenario, we suggest that the FEVER database can be of use to identify feature expertise,
+and possibly facilitate bug triaging \citep{matter_assigning_2009}.
+A maintainer in charge of bug triage may use a simple query with information on potentially faulty features
+to find which developers can provide insight on an issue or even fix it.
+
+The number of bug reports, and the number of developers makes appropriate bug assignment to developers difficult.
+To alievate some of those issues, several approaches have been designed to facilitate the identification of experts capable of fixing a bug \citep{ahsan_automatic_2009,matter_assigning_2009}.
+Most of those solutions rely on previous fixes to determine, based on bug report content, who is the most likely to be able to provide an answer to a bug report.
+What we propose is to take into account a feature-based expertise, and relate the bug report content with specific features, in order to determine
+who is the best suited to fix bugs related to that feature.
+This provides an additional type of information, based on fine-grained artefact changes, which can be particularly useful for artefacts at the limit 
+of a subsystem where more than one team may be considered as potential fixers.
+We do not claim that FEVER could replace existing approaches, but feature-related evolution information could be added to increase the accuracy
+of existing techniques.
+
+\subsection{FEVER for Software Engineering Research}
+
+In scenario \textbf{S4}, a researcher in the domain of evolution of highly variable software systems
+is interested in the typical structure of feature related changes.
+For instance, he would like to observe the occurrences of the introduction of abstract features, in the sense of Thuem et al. \citep{thuem_reasoning_2009}: a feature only exists in the VM.
+Using FEVER, we can identify the introduction of such features with this query:
+\vspace{-.5ex}
+\begin{verbatim}
+match 
+ (t:TimeLine)-[:FEATURE_CORE_UPDATE]->(f:FeatureEdit)
+where 
+ not (t)-[:FEATURE_CORE_UPDATE]->(:MappingEdit)
+ and not (t)-[:FEATURE_CORE_UPDATE]->(:ArtefactEdit)
+ and not (t)-[:FEATURE_INFLUENCE_UPDATE]->(:SourceEdit)
+ and f.change="Add"
+return t
+\end{verbatim}
+\vspace{-.5ex}
+In release v3.13, this query returns 42 features. 
+Because \textbf{TimeLine} entities are regrouping changes across spaces and commits,
+we know that those 42 features are indeed abstract, and this is not the result
+of a developer who first modified the variability model and in a later commit adjusted the implementation.
+The addition of an abstract feature has not yet been described as a co-evolution pattern, and further analysis 
+is necessary to fully describe such changes. 
+Nonetheless, this illustrates how FEVER can be of use to discover patterns or identify instances of known patterns.
+An earlier version of FEVER was used by Sampaio et al. to facilitate the identification of instance of changes affecting certain spaces
+in the context of their work on safe evolution templates \citep{sampaio_partially_2016}.
+
+In scenario \textbf{S5}, we consider the work of a researcher focusing on variability related bugs \citep{abal_42_2014} and bug prediction \citep{giger_comparing_2011}.
+The data captured by FEVER may reveal information on features involved in bug-fixing commits.
+A basic approach would consist in using regular expression on commit messages to identify bug-fixing commits.
+Using this, one can identify features involved in bug-fixing commits using the following query:
+\vspace{-.5ex}
+\begin{verbatim}
+match (c:commit)-->()<--(t:TimeLine)
+	where not c.message =~ "(?ism).*copyright notices.*" 
+			and c.message =~ "(?ism).* bug.*" 
+			or c.message =~ "(?ism).* error.*" 
+			or  c.message =~ "(?ism).* fix.*" 
+			or c.message =~"(?ism).* revert.*" 
+return t.name, count(distinct c);
+\end{verbatim}
+\vspace{-.5ex}
+We note that Tian et al. devised a methodology to identify bug-fixing commits in the Linux kernel \citep{tian_identifying_2012}.
+Combining such an approach with FEVER should yield more accurate results than the query presented here.
+However, with such a simple query, one can identify which features are more error-prone than others.
+It would be interesting to see if the number of features involved in a commit influences
+the bug-proneness of commits.
+
+Finally, the data provided by German et al. \citep{german_continuously_2015} can be used to track commits over time and across repositories.
+Combining this information with the FEVER database would allow us to track feature development across Git repositories, 
+and observe how the Linux community collaboratively handles the development of inter-related features.
+
+The implementation of variant-rich system is known to be challenging. Features and their relationships, if misunderstood, can lead to issues such as dead code,
+invalid products, or compilation errors.
+To mitigate such problems, researchers have to identify the issues, find a way to fix them, and apply them on a number of cases for validation.
+We argue here that tools such as FEVER are a convenient way of identifying what changes occurred in commits with respect to features.
+Once a researcher has found a scenario where the studied error occurs, one can easily find other scenarios, with similar changes, and observe if the error occurred there as well.
+FEVER by itself cannot mitigate such a problem, but constitutes a way to facilitate research in such a domain: by easing the search for a problematic situation, and providing a  quantitative estimate of the occurrences of problematic evolution scenarios.
+
+Given the current accuracy of the FEVER prototype (85\%), a manual review of the changes is necessary to guarantee that the retrieved
+changes are all correct. However, it is sufficient to reduce efficiently the number of commits that must be reviewed, and provide a solid starting point
+for further manual analysis, as was done by Sampaio et al. \citep{sampaio_partially_2016}.
+
+Conversely, should a developer run a query on FEVER and get no results, there is a small chance that FEVER may have failed to extract such changes (false negative).
+In such a situation, the developer might have to rely on Git query instead, but FEVER already provides some information:
+the type of change sought by the developer is not common, or the implementation used to support those specific features/constructs are
+not what is commonly used in the Linux kernel.
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,60 @@
+\section{Conclusion and Research Directions}
+\label{sec:conclusion}
+
+In this paper, we presented FEVER, an approach to automatically extract and build a feature-centered representation of changes
+in commits affecting the implementation of features in highly variable software systems. 
+FEVER retrieves commits from versioning systems and, using model-based differencing, 
+extracts detailed information on the changes, to finally combine them into feature-oriented changes. 
+We applied this approach to the Linux kernel and used the constructed dataset to evaluate its accuracy 
+in terms of complex change representation.
+We showed that we were able to accurately extract and integrate changes from various artefacts in 87.2\%  of the studied commits.
+
+Our exploratory study of co-evolution in the Linux kernel showed that  co-evolution of artefacts during feature evolution does occur, 
+but, over a single release, most features
+only evolve through their implementation. A majority of developers focus only on the feature implementation
+and, over the course of a release, only few modify variability spaces beyond the implementation.
+We also found that, while co-evolution of artefacts occurs in every release, they account for less than 22\% of feature evolution scenarios,
+and only 11\% of authors will modify all variability spaces over the course of a release, but over time, 69,51\% of authors will only modify the implementation of features without affecting the variability model or feature-asset mapping.
+
+Through this work we make the following key contributions:
+\begin{itemize}
+\item a model-based approach to extract and consolidate feature changes across variability spaces
+\item an model of feature-oriented changes, focusing on the co-evolution of artefacts in different variability spaces during feature evolution
+\item an evaluation of the FEVER prototype implementation, as well as a evaluation of the improvement with respect to its previous installment
+\item a quantitative study describing the frequency of artefact co-evolution in the context of feature
+changes from a feature perspective, and authorship perspective
+\item several examples demonstrating the potential usage and value of the data gathered by such an approach for developers and researchers working
+on configurable software systems
+\item an implementation of FEVER as well as the full dataset, available for download\footnote{http://swerl.tudelft.nl/bin/view/NicolasDintzner/WebHome}
+\end{itemize}
+
+There several ways in which the FEVER approach and its evaluation can be further enhanced in the future. 
+First, let us consider potential improvement regarding the approach itself.
+At a variability model level, one could consider extracting semantic changes rather than
+syntactic changes as suggested by the work of Rothberg et al. \citep{rothberg_feature_2016}.
+Efficient semantic differencing on a variability model as large as the Linux kernel V.M. is a challenging task.
+Moreover, given the potential size of a configuration of the Linux kernel, \ie thousands of features,
+one would have to consider how to present this information in a way that can be useful to a human developer, 
+making this an interesting research challenge.
+Regarding mapping changes, the current FEVER approach captures only change information contained within 
+changed Makefiles. A more precise approach would be to capture the exact presence condition of assets, 
+rather than the main features participating in that condition.
+Changes in the presence conditions will require a computationally intensive process, and the output 
+might be difficult to interpret by a human. This is a direction we did not explore so far, 
+but would be valuable to obtain a more sound and complete view on co-evolution changes in highly variable systems.
+On a source code level,  FEVER does not consider file dependencies.
+A change to an \#include statement could be a sign of changes in the relationships between features implemented within those files.
+Such changes are not necessarily represented in the mapping nor the variability model.
+A potential improvement of the FEVER approach would consist in taking into account file dependencies, 
+and identify the nature of the symbols tying those files (functions, variable, type definitions, and so on).
+
+To further evaluate the capabilities of the FEVER approach, we intend to apply FEVER to other systems.
+Candidates for such work would be systems relying on different technologies for variability model 
+description and feature-asset mappings.
+The improved FEVER change meta-model and algorithm, as well as our observation on co-evolution open 
+new exciting research directions.
+The information captured by FEVER on changed features could prove to be useful in the domain of test case selection
+for highly configurable systems.
+Combining the work of Vidacs et al. \citep{vidacs_supporting_2015} on test selection in highly configurable software based on configuration and code coverage, and the work on of Soetens et al. \citep{soetens_change-based_2016} on change-based test selection supported by FEVER data 
+could lead to the discovery of efficient new techniques to support testing in the context of highly variable software.
+

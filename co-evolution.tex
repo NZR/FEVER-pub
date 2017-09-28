@@ -1,0 +1,580 @@
+\section{Co-evolution in Linux}
+\label{sec:coevolution}
+
+In this section we explore the data collected by FEVER over 15 releases of the Linux kernel.
+Given the relatively high accuracy of the approach established in \secref{sec:evaluation}, 
+we can rely on FEVER data to explore co-evolution of artefacts in the context of feature evolution in the Linux kernel.
+
+The state of the art on feature-oriented co-evolution of artefacts in highly configurable software systems
+focused on specific changes \citep{passos_coevolution_2015,neves_safe_2015,neves_investigating_2011}.
+Those studies were performed using manual analysis. While those provide relevant and important 
+knowledge on change scenarios, little information can be found on their occurrence 
+in large systems. 
+In this section, we report on an exploratory study of the feature-oriented co-evolution of artefacts in the Linux kernel. 
+
+We argue that quantitative information on the frequency of co-evolution over the evolution of a complex system
+would allow tool developers and researchers to determine how relevant the support of co-evolution for the evolution of such systems is.
+How often is co-evolution occurring, and how many authors actually face co-evolution during their development tasks?
+What percentage of the touched features actually evolve in multiple variability spaces? And when they do, which spaces 
+are more frequently involved? 
+Should a developer provide tool support for co-evolution, and what should be its main focus to help in a majority of cases? 
+This leads us to formulate the following two research questions: 
+\begin{itemize}
+\item RQ3: To what extent do artefact in different variability spaces co-evolve during the evolution of features?
+\item RQ4: To what extent are developers facing co-evolution over the course of a release?
+\end{itemize}
+
+With the first question, we can obtain an estimate of how likely co-evolution is from a technical perspective.
+If a feature evolves during a release, how likely is it that this evolution will imply the modification of multiple types of artefacts?
+With the second question, we aim at estimating the potential audience for tools and techniques
+targeting co-evolution issues.
+Provided a simple and efficient method can be devised to guarantee correct feature-oriented co-evolution
+of artefacts, what percentage of the development team would actually benefit from it?
+
+To put our results into perspective, we first provide our readers with
+general information on the evolution of the Linux kernel as captured by FEVER over the studied
+period of time.
+The dataset collected with FEVER covers 15 releases of the Linux kernel, starting at v3.9 (April 2013 - first extracted commit) until v4.4.(January 2016 - last extracted commit).
+A release of the Linux kernel lasts for approximately six weeks.
+
+
+\begin{table}[h]
+
+\centering
+\begin{adjustbox}{width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r|r|}
+\hline
+Release & 3.10 & 3.11 & 3.12 & 3.13 & 3.14 & 3.15 & 3.16 \\
+\hline
+Number of commits	& 14737 & 11851 & 11906	& 13288	& 13415	& 14871	& 13830	\\
+Number of authors	& 1433	& 1304  & 1362  	& 1400	& 1481	&1535	& 1513	\\
+Number of features	& 12511	& 12603	& 12780	& 13022	& 13134	& 13297	& 13453	\\
+Number of timelines	& 5208	& 4397	& 4424	& 4581	& 4503	& 4960	&4099	\\
+\hline
+\end{tabular}
+\end{adjustbox}
+
+\vspace{5mm}
+\begin{adjustbox}{width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|}
+\hline
+Release &  3.17 & 3.18 & 3.19 & 4.0 & 4.1 & 4.2 & 4.3 & 4.4 \\
+\hline
+Number of commits	& 13331	& 12361	&13652	&11306	&12965	&14750	&13282	&14082	\\
+Number of authors	& 1461	& 1507 	& 1495	&1495 	&1576	&1630	&1607	&1636 	\\
+Number of features	& 13602	& 13631	&13802	&13932	&14427	&14217	&14458	&14607	\\
+Number of timelines	&4322	&3797	& 5131	& 3432 	& 4082	& 4316	&4159	&3967	\\
+\hline
+\end{tabular}
+\end{adjustbox}
+
+\caption{General information on the Linux kernel development: number of commits, authors, features, and FEVER \textbf{Timelines} over the studied period of time.}
+\label{tab:general_info}
+\end{table}
+
+
+\subsection{Methodology}
+
+Before proceeding, we first provide general information on the studied releases.
+\tabref{tab:general_info} presents the number of features at the beginning of each release,
+the number of authors, the number of commits, and the number of \textbf{TimeLine} entities.
+The number of features at the beginning of the release is obtained 
+by using the initial feature list produced for the extraction process.
+The number of \textbf{TimeLine} was obtained by querying the FEVER databases, representing the number of features that evolved during that release.
+The number of commits and authors were obtained by querying the FEVER database
+and cross-checked using ``Git''.
+
+We then proceeded as follows.
+We built a number of queries to identify features, the spaces in which they evolve and the involved authors.
+We ran the queries on each extracted release of the Linux kernel and dumped the results in a series of .csv files.
+For each commit we extracted the type of artefacts affected by the commits as well as the authors.
+To identify authors, we used the author name, as reported in the Git repository - this information is stored as part of the 
+commit entity in FEVER.
+We also consolidate the collected information over time. This allows us to contrast the evolution of feature and variability authorship in each release with the evolution of feature and variability space authorship over multiple releases (15 in this case).
+To do so we aggregate the collected information by feature (identified by their name), and authors (identified by their name as well).
+By doing so, we avoid biases caused by complex co-evolution over time. For instance, a feature is touched in the code in six releases, but its mapping or variability model representation change in seventh. Over time, this should be considered as a change to all spaces, where on a release level, we would record a changes in the source code only, or V.M. and build only - which would be correct but partial.
+We then imported this information into a spreadsheet editor to compile the results.\footnote{The spreadsheets used during this experiment are available on our website: http://swerl.tudelft.nl/bin/view/NicolasDintzner/WebHome}
+
+As noted in previous work on mining social information from software repositories \citep{kouters_whos_2012,bird_latent_2008}, authors are likely to use aliases and submit commits using different email addresses.
+In this work, we relied on the author's name, as stored in the Git repository and did not take aliases into account.
+We evaluated the possible bias caused by aliases on our study by performing a manual analysis of author's name in release 4.4.
+To identify aliases, we searched among the list of author names duplicated names and first name. We then
+decided whether two names are likely to point to the same person using the following strategy: 
+for each name we took into account the following variations mentioned by Kouters et al. \citep{kouters_whos_2012}:
+\textit{ordering}, \textit{diacritics}, \textit{nicknames}, 
+\textit{middle initials and middle name}, and finally \textit{irrelevant incorporation in the name}, \textit{emails instead of name}.
+This analysis of author's name in release 4.4 revealed that, out of the 1636 authors, 53 recorded author names are aliases, 
+accounting for 3.23\% of author names.
+
+\subsection{Results: Feature Co-Evolution Over Time}
+
+The results of our quantitative analysis of co-evolution of features in the Linux kernel are presented in \tabref{feature_evolution}.
+This table summarizes, for each release, the space(s) in which features of the kernel evolve.
+In addition, we aggregated the results for feature evolving in a single space, two spaces, and three variability spaces, 
+with raw quantitative information and the percentage of those features (in \textit{italic} in the table).
+For instance, in release 3.10, FEVER captured 5208 feature \textbf{TimeLines}.
+Among those, 654 evolved solely in the variability model (V.M.), and the total number of features
+that evolved through changes in a single space is 3407, or 78.19\% of the evolving features in that release.
+
+The table also presents the average and median number of features evolving in each combination of spaces over the studied period of time.
+We can see in the penultimate column of \tabref{feature_evolution} that, on average over 15 releases,
+4538 feature evolved and that, on average, only 7.43\% of them evolved in all three spaces.
+
+\begin{table}[h]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|}
+\hline
+Release	 			& 3.10 & 3.11 & 3.12 & 3.13 & 3.14 & 3.15 & 3.16 & 3.17 & 3.18\\
+\hline
+Number of timelines	& 5208	& 4397	& 4424	& 4581	& 4503	& 4960	&4099	&4322&3797\\
+\hline
+V.M. only			&654		&508		&909		&357		&390		&608		&462		&487	 &337	\\
+Mapping only 		&11		&9		&3		&15		&11		&7		&8		&3	&15	\\
+Source only 			&3407	&2859	&2586	&3387	&3325	&3292	&2799	&2862 &2695\\	
+\emph{Single space}	&\emph{4072}	&\emph{3376}	&\emph{3498}	&\emph{3759}	&\emph{3726}	&\emph{3907}	&\emph{3269}	 &\emph{3352}	 &\emph{3047} \\
+\emph{Single space (\%)}	&\emph{78.19	} &\emph{76.78}	&\emph{79.07	} &\emph{82.06}	&\emph{82.74}	&\emph{78.77}	&\emph{79.75} &\emph{77.56} & 	\emph{80.25}\\
+\hline
+V.M. \& mapping 		&39		&22		&14		&20		&19		&15		&21		&33 	&14	\\
+V.M \&  source		&632		&549		&588		&453		&442		&522		&451		&450	  &366	\\
+source \& mapping	&54		&67		&56		&68		&65		&59		&76		&71	&50	\\
+\emph{Two spaces}			&\emph{725}		&\emph{638}		&\emph{658}		&\emph{541}		&\emph{526}		&\emph{596}		&\emph{548}		&\emph{554}&\emph{430} \\
+\emph{Two spaces (\%)}		&\emph{13.92	}&\emph{14.51}&\emph{14.87}&\emph{11.81}&\emph{11.68}&\emph{12.02}	&\emph{13.37	}&\emph{12.82}  &\emph{11.32}\\
+\hline
+All spaces 			&411		&383		&268		&281		&251		&457		&282		&416	 & 320		 \\
+\emph{All spaces (\%)}		&\emph{7.89}	&\emph{8.71}	&\emph{6.06}	&\emph{6.13}	&\emph{5.57}	&\emph{9.21}	&\emph{6.88}	&\emph{9.63}	&\emph{8.43}\\
+\hline
+\end{tabular}
+\end{adjustbox}
+
+\vspace{5mm}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r||r|r|}
+\hline
+Release	 			 & 3.19 & 4.0 & 4.1 & 4.2 & 4.3 & 4.4 & Average & Median\\
+\hline
+Number of timelines		& 5131	& 3432 	& 4082	& 4316	&4159	&3967 & 4358	 & 4322\\
+\hline
+V.M. only				&355		&330		&337		&406		&387		&330	 & 547.1 (10.44\%)	& 390 (9.40\%)\\
+Mapping only 			&3		&23		&11		&29		&1		&5		& 10.27 (0.2\%) & 9 (0.20\%)\\
+Source only 				&3962	&2369	&2932	&2954	&2967	&2884	& 3019 (69.27\%) & 2932 (69.03\%)\\
+\emph{Single space}		&\emph{4320}	&\emph{2722}	&\emph{3280}	&\emph{3389}	&\emph{3355}	&\emph{3219}	&\emph{3486} & \emph{3376}\\
+\emph{Single space (\%)}	&\emph{84.19	}&\emph{79.31}	&\emph{80.35}	&\emph{78.52	}&\emph{80.69}	&\emph{81.14}	& \emph{79.96} & \emph{79.75}\\
+\hline
+V.M. \& mapping 			&9		&8		&17		&21		&14		&14	& 18.67 (0.45\%)	 & 17 (0.41\%)\\
+V.M \&  source			&428		&349		&415		&462		&449		&410	 & 467 (10.65\%)	& 450 (79.75\%)\\
+source \& mapping		&60		&63		&86		&91		&56		&71	& 66.2(1.51\%)	 & 65 (1.48\%)\\
+\emph{Two spaces}			&\emph{497}		&\emph{420}		&\emph{518} &\emph{574}&\emph{519	}	&\emph{495}	& \emph{549.3} & \emph{541}	\\
+\emph{Two spaces (\%)} &\emph{9.69}&\emph{12.24}&\emph{12.69	}&\emph{13.30}&\emph{12.48}&\emph{12.48} & \emph{12.61} & \emph{12.48}\\
+\hline
+All spaces 				&314		&290		&284		&353		&284		&253		& 323,1 & 290 \\
+\emph{All spaces (\%)}	&\emph{6.12}	&\emph{8.45}	&\emph{6.96}	&\emph{8.18}	&\emph{6.83}	&\emph{6.38}	 & \emph{7.43} & \emph{6.95}\\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Co-evolution of edited features over time. Values in italics are computed, while values in regular fonts are obtained using Neo4j queries.}
+\label{feature_evolution}
+\end{table}
+
+Regarding the co-evolution of artefacts with respect to feature evolution, we can see that most features evolve only through their implementation, after their initial introduction. 
+
+On average and over the studied period of time, 69.27\% of evolving features only changed in their implementation, either modification of the mapped artefact or modification of code blocks - \#ifdef block.
+We can order the combination of spaces in which features are most likely to evolve as follows:
+\begin{enumerate}
+\item Source only (69.27\%);
+\item V.M. only (10.44\%), and V.M. with Source (10.65\%);
+\item All three spaces (7.43\%);
+\item Any other combination of spaces occurs, on average over the studied period of time less than 2\% of the time.
+\end{enumerate}
+
+\tabref{feature_evolution_aggregated} show the evolution of all changed features, by spaces, over the entire studied period of time, \ie 15 releases, approximately two years.
+The results show that, over the 15 releases, 4111 changed features among the 17448 features that were changed evolved in all three spaces. 
+We can see that half of features (49.94\%) evolved in a single space during that time.
+
+\begin{table}[h]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+Spaces	 			 & Count & Ratio (\%)\\
+\hline
+Number of timelines		& 17448	& 100.00 \\
+\hline
+V.M. only				&1856	&10.64	\\
+Mapping only 			&23		&0.13	\\
+Source only 				&6835	& 39.17		\\
+
+\emph{Single space}		&\emph{8714}	& 49.94	\\
+\hline
+V.M. \& mapping 			&214		&1.23		\\
+V.M \&  source			&4185	&23.99		\\
+source \& mapping		&224		&1.28		\\
+\emph{Two spaces}		&\emph{4623}		&\emph{26.49}	\\
+\hline
+All spaces 				&4111		& 23.56\\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Co-evolution of edited features aggregated by feature, over the entire studied period of time. Values in italics are computed, while values in regular fonts are obtained using Neo4j queries.}
+\label{feature_evolution_aggregated}
+\end{table}
+
+Given our results, we can answer our third research question, RQ3: 
+To what extent do artefacts in the different variability spaces co-evolve during the evolution of features?
+\begin{framed}
+In a given release, a majority of features  (79.96\%) evolve without any co-evolution in the different variability spaces, their evolution occurs within a single space.
+The percentage of feature evolution performed by modification of multiple spaces is low (less than 25\%) but remains relatively constant over
+the studied period of time.
+
+Over a longer period of time, more features will evolve in multiple spaces (50\% after 15 releases).
+\end{framed}
+
+\subsection{Results: Co-evolution Authorship}
+
+\tabref{feature_authors} shows the spaces affected by authors commits in the Linux kernel.
+For each release, it presents the number of authors and the number of authors whose commits
+affected the different combinations of spaces.
+In release 3.18, among the 1507 authors, 12 committed changes modifying only the mapping space.
+In that same release, the number of authors whose changes modified only a single space is 1134, 
+representing 78.9\% of all authors.
+
+The last two columns of the table show the average and median number of authors and the spaces they affected, with the aggregated values
+per spaces, over the studied period of time.
+We can see in the last column that the median number of authors in the studied releases is 1495,
+and the median number of authors who modified all spaces is 161, representing 10.98\% of the authors.
+
+\begin{table}[h]
+\centering
+{
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|}
+\hline
+Release	 			& 3.10 & 3.11 & 3.12 & 3.13 & 3.14 & 3.15 & 3.16 & 3.17 & 3.18  \\
+\hline
+Number of authors	&1433	&1304	&1362	&1400	&1481	&1535	&1513	&1461	&1507\\
+\hline
+V.M. only			&8	&6	&7	&10	&12	&11	&7	&5	&6	\\
+Mapping only 		&9	&7	&8	&5	&7	&18	&8	&21	&12	\\
+Source only 			&1064	&960	&1071	&1043	&1101	&1152	&1163	&1069	&1116\\
+\emph{Single space}	&\emph{1081}	&\emph{973}	 &\emph{1086	}&\emph{1058	}&\emph{1120	}&\emph{1181	}&\emph{1178	}&\emph{1095	}&\emph{1134	}\\
+\emph{Single space (\%)}	&\emph{77.55}	&\emph{77.04}	&\emph{80.03}	&\emph{78.60	}&\emph{77.99}	&\emph{79.58}	&\emph{80.03	}&\emph{77.66}	&\emph{78.59}	 \\
+\hline
+V.M. \& mapping 		&2	&0	&2	&1	&0	&0	&0	&1	& 4  \\
+V.M \&  source		&77	&63	&78	&83	&81	&63	&70	&84	& 75 \\
+source \& mapping	&64	&62	&52	&61	&74	&77	&73	&63	& 70 \\
+\emph{Two spaces	}&\emph{143	}&\emph{125	}&\emph{132	}&\emph{145	}&\emph{155	}&\emph{140	}&\emph{143	}&\emph{148	}&\emph{149	} \\
+\emph{Two spaces (\%)}		&\emph{10.26}	&\emph{9.90}	&\emph{9.73	}&\emph{10.77	}&\emph{10.79}	&\emph{9.43}	&\emph{9.71}	&\emph{10.50}	&\emph{10.33}	 \\
+\hline
+All spaces 			&170	&165	&139	&143	&161	&163	&151	&167	&160	\\
+\emph{All spaces (\%)}		&\emph{12.20}	&\emph{13.06	}&\emph{10.24}	&\emph{10.62}	&\emph{11.21}	&\emph{10.98}	&\emph{10.26	}&\emph{11.84}	&\emph{11.09}\\
+\hline
+\end{tabular}
+\end{adjustbox}
+
+\vspace{5mm}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{|l|r|r|r|r|r|r||r|r|}
+\hline
+Release	 			& 3.19 & 4.0 & 4.1 & 4.2 & 4.3 & 4.4 & Average & Median \\
+\hline
+Number of authors	&1495	&1495	&1576	&1630	&1607	&1636 & 1495.67 & 1495.00 \\
+\hline
+V.M. only			&20	&6	&12	&6	&7	&11	 & 8.93 (0.62\%) & 7.00 (0.52\%)\\
+Mapping only 		&15	&15	&14	&21	&16	&17 & 12.87 (0.88\%) & 14.00 (0.92\%)\\
+Source only 			&1085	&1121	&1181	&1195	&1251	&1210 & 1118.6 (77.24\%)& 1116,00	(77.49\%)\\
+\emph{Single space}	&\emph{1120	}&\emph{1142}&\emph{1207	}&\emph{1222	}&\emph{1274	}&\emph{1238	} & \emph{1140.60} & \emph{1134.00}\\
+\emph{Single space (\%)}	&\emph{77.78	}&\emph{79.75}	&\emph{79.56	}&\emph{77.44}&\emph{80.08}&\emph{79.31} & \emph{78.73} & \emph{78.6} \\
+\hline
+V.M. \& mapping 		&1	&2	&3	&1	&1	&2	& 1,33 (0.09\%)& 1,00 (0.07\%)\\
+V.M \&  source		&82	&73	&74	&78	&75	&86	& 76,13 (5.27\%)& 77,00 (4.85\%)\\
+source \& mapping	&80	&56	&79	&85	&71	&66	& 68,87 (4.75\%) & 70,00 (4.85\%)\\
+\emph{Two spaces	}&\emph{163}	&\emph{131}	&\emph{156	}&\emph{164	}&\emph{147	}&\emph{154	} & \emph{146.33} & \emph{147} \\
+\emph{Two spaces (\%)}	&\emph{11.32}	&\emph{9.15}	&\emph{10.28}	&\emph{10.39}	&\emph{9.24}	&\emph{9.87} & \emph{10.11} & \emph{10.26} \\
+\hline
+All spaces 			&157	&159	&154&192	&170	&169	 & 161.33 & 161.00\\
+\emph{All spaces (\%)}&\emph{10.90}	&\emph{11.10}	&\emph{10.15}	&\emph{12.17}	&\emph{10.69}	&\emph{10.83} &\emph{11.16} & \emph{10.98}\\
+\hline
+\end{tabular}
+\end{adjustbox}
+}
+\caption{Authorship of variability spaces over time. Values in italics are computed, while values in regular fonts are obtained using Neo4j queries}
+\label{feature_authors}
+\end{table}
+
+Regarding authorship of the different spaces, we can see that a majority of developers, over the course of a release, modified only the implementation space.
+In this context, this means that they touched the implementation of a feature (mapped artefact) or a code block (\#ifdef block).
+Our results show that on average, over the studied period of time,  this is true for 77.24\% of authors.
+When authors touch multiple spaces, they are less likely to modify only the variability model and the mapping (0.09\% of authors on average) than other combinations of spaces.
+Finally, between 10.2\% and 13.06\% of authors perform modifications spreading across all three spaces.
+We can see from \tabref{feature_authors} that this percentage varies very little over the studied period of time.
+
+\tabref{feature_authorship_aggregated} present the authorship of variability spaces aggregated over the 15 releases we studied.
+The table shows that 17.47\% of the 6645 authors we identified changed features by editing all three variability spaces.
+Over the studied period of time, 72.47\% of authors touched only a space, and a majority (71.33\%) of authors focused solely on the source code.
+
+\begin{table}[h]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+Spaces	 			 & Count & Ratio (\%)\\
+\hline
+Authors 					& 6645	& 100.00 \\
+\hline
+V.M. only				&28		&0.42	\\
+Mapping only 			&48		&0.72	\\
+Source only 				&4740	&71.33	\\
+
+\emph{Single space}		&\emph{4816}	& \emph{72.47}	\\
+\hline
+V.M. \& mapping 			&4		&0,06		\\
+V.M \&  source			&316		&4.76		\\
+source \& mapping		&318		&4.79		\\
+\emph{Two spaces}		&\emph{638}	&\emph{9.60}	\\
+\hline
+All spaces 				&1191		& 17.92\\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Authorship of variability spaces, aggregated by author over the entire studied period of time. Values in italics are computed, while values in regular fonts are obtained using Neo4j queries.}
+\label{feature_authorship_aggregated}
+\end{table}
+
+With those results, RQ4: To what extent are developers facing co-evolution over the course of a release?
+\begin{framed}
+On a given release, only a minority (less than 25\%) of developers will make changes to multiple spaces.
+The percentage of commit authors dealing with co-evolution is thus low, but stable over time.
+A majority of authors (approximately 75\% in each release, and approximately 71\% over time) will focus only on source code.
+\end{framed}
+
+
+\subsection{On Co-evolution in Linux}
+
+In our experiments, we extracted feature-related changes from release v3.10 (June 2013) until release v4.4.(January 2016).
+The development of the kernel started much earlier than the first release studied in this work.
+Development practices in the Linux kernel are well documented and the development process can be considered as very mature.
+What we observe are changes occurring in a stream-lined development process.
+This in itself might explain the regularity in the data we gathered in terms of co-evolution and authors edits in various spaces.
+This regularity suggests that occurrences of co-evolution in feature evolution, or author experience of co-evolution
+will remain the same until the next upheaval of the development process or of the system's architecture.
+
+With this in mind, we note that most developers did not perform changes in multiple spaces.
+Over time, a majority (71.33\%) of developers only modified the implementation space.
+This is visible in our results, both when describing author's contributions to individual releases, and their contribution over the studied period of time.
+However, this does not mean that developers cannot introduce dead code blocks or false optional blocks in the implementation.
+Valid changes to the implementation do require some knowledge on feature support in all spaces.
+Developers still benefit from tools focusing on validation of the consistency of features across spaces.
+Such tools, such as KbuildMiner \citep{nadi_mining_2012}, TypeChef \citep{kenner_typechef:_2010}, or Undertaker \citep{tartler_dead_2009}, usually 
+require the extraction of variability information from all variability spaces. 
+Then they aggregate the information validate their consistency.
+If, as shown by our results, in most cases the VM and the mapping remain untouched, the information required from those artefacts
+to run consistency checks can be cached. 
+According to our results, on a given release, more than 75\% of authors could use this cached information - making 
+cross-space variability checks more efficient.
+This would reduce the cost of variability consistency checks across spaces.
+Yet, for more complex change scenarios, a thorough and complete analysis is still required.
+
+Hellebrand et al. noted that, in an industrial context, and for highly configurable systems, 
+the evolution trends were leading towards less co-evolution of artefacts (source and model artefacts in their case \citep{hellebrand_coevolution_2014}).
+Such an observation is consistent with the idea that common evolution scenarios should not require many modifications in many artefacts of different nature.
+In the Linux kernel, we have shown that co-evolution of heterogeneous artefacts only occurred in 30\% of commits, and only for 25\% of the developers.
+Considering that those ratios are relatively stable overtime, we can assume that those are the results of choices in the Linux architecture, development practices and the choice of technology to support variability (Kconfig/Makefile/pre-processor annotation). 
+The data we gathered constitute a base line for further studies on co-evolution in Linux. 
+Further changes to the implementation techniques used to support variability implementation should not increase artefact co-evolution beyond what we observed in our study.
+
+Additional studies on feature-oriented co-evolution on variant-rich software systems, beyond the Linux kernel, would allow us to see
+if other mature variant-rich systems evolve with similar ratio of co-evolution. With more points for comparison, we will be in a better position
+to assess whether this ratio of co-evolution is optimal or not.
+
+\section{Threats to Validity}
+\label{sec:discussion}
+
+We present in this section the threats to validity of the two parts of our study:
+the change extraction process from developers' commits, and our exploratory study
+of co-evolution in the Linux kernel.
+
+\subsection{Threats to Validity: Feature-Oriented Change Extraction}
+
+Let us first discuss the limitations and threats to the validity of the FEVER change extraction process.
+
+\textit{Limitations.}
+
+FEVER may fail when changes to artefacts deviate from the ``usual'' development practices (naming convention, feature-file mapping approach and so on). 
+Such cases occur when dealing with architecture specific features, where the link between features and artefacts in Makefiles relies on 
+variable values rather than straight forward foldering structures - as is the case for sub-architectures of the ARM main architecture.
+On some occasion, the object file included in Makefile by default in the compilation process is not the the standard Linux ``obj-y'' list. 
+In such cases, FEVER is not necessarily able to determine that those artefacts are associated with the feature that condition the inclusion of the Makefile.
+Errors in the code changes are mostly due to the problems when assigning code changes to block changes - we can identify if a block has changed (added or removed),but finding how the code inside the block was modified remains a challenge. 
+This is particularly true when we observe series nested \#ifdef statements, each containing a single line of code.
+Finally, we have some difficulties assessing whether a symbol in the code is a reference to a feature or not, since number of C macros in the implementation may come as false positives. Despite such shortcomings, occurring when developers do not, or are not able to, follow the usual development guidelines, FEVER still produces correct results for 87.2\% of the commits in our sample of 810 commits.
+
+While we attempt to be as exhaustive as possible, FEVER does not capture all feature related information in all artefacts.
+Because FEVER operates on a file-basis, with a text-based parser, certain constructs in the variability model or the mapping
+are not captured. 
+The limitations of FEVER for each space are mentioned in the relevant sub-sections of \secref{sec:approach}.
+
+This limitation has practical implications on our work. For instance, knowing that we do not consider
+cross artefact relationship (such as ``source'' statement in Kconfig files),
+what we observe are changes done locally to features by developers - at a file level. 
+As a result, certain interpretation of the changes are not possible. For instance, based solely on FEVER data, 
+one cannot identify how the available configurations of the Linux kernel evolved. This requires an understanding of 
+how the entire set of Kconfig files and features has changed - this amounts to semantic differencing. FEVER captures
+textual changes performed by developers. 
+
+
+\textit{Internal validity.}
+To extract and analyze feature-related changes, FEVER uses model-based differencing techniques.
+We first rebuild a model of each artefact, and then perform a comparison.
+The construction of the model relies on heuristics, which themselves work based on assumptions on the structure of the touched artefacts - 
+whether they be code, models, or mappings.
+For this reason, information might be lost in the process.
+To guarantee that the data extracted by FEVER do match what can be observed in commits, 
+we performed a manual evaluation, covering change attributes our approach currently consider.
+The evaluation showed that a large majority of the changes are captured accurately, with a precision and recall of at least 80\%.
+This gives us confidence in the reliability of the data.
+
+Using manual analysis for validation purposes is inherently fault prone.
+The difference in terms of content of the samples used for the replication of our initial study highlights this.
+For instance, we had identified 208 added features during the initial study, but only 206 during the replication - over the same set of commits, and therefore the same set of changes.
+While in some cases (\eg for file-feature mapping), the differences can be explained by a better ability to track some changes and therefore 
+we simply have more information, in other cases, this is due to human error when reviewing the content of commits.
+For the evaluations performed in this work (both the replication and the new evaluation), the manual review of commits was performed twice - for the entire dataset, leaving a small time gap (between 2 days and a week) between the two evaluation rounds.
+While the errors identified in the initial evaluation lead to a significant update for some change attributes (namely ``added feature references'' in the code), evaluation errors occurred in less than 5\% of the commits.
+Throughout this two step evaluation, we still observed more than 80\% of the commits being matched perfectly in the FEVER database. 
+This increases our confidence in the overall validity of our results. 
+
+The evaluation of the new FEVER heuristics, compared to its previous version, highlights significant improvement of accuracy on specific change attributes. 
+In particular the capture of code block changes with preserved code block improved from  a precision of 32\% to 93.3\%. 
+Moreover, the added change attributes (namely artefact changes, additional artefact type, and \textbf{TimeLine} relationships to \textbf{FeatureEdit}) were captured with a good precision and recall (at least 80\%).
+
+Because the FEVER approach is based on heuristics, it is neither sound nor complete. 
+But for more than 80\% of the extracted commits, the data does reflect changes performed by developers.
+While this may be a limitation when searching for very specific changes, with specific change attributes, 
+overall trends and statistics done over the course of a release reflect developer's activities on features in the Linux kernel
+with sufficient accuracy to draw conclusions from it.
+
+\textit{External validity.}
+
+Our work focuses on build-time variability, constructed around the build system and 
+an annotative approach to fine-grained variability implementation (\#ifdef statements).
+While we believe that the change model may be useful to describe runtime variability,
+the extraction process is not suitable to extract feature mappings from the implementation itself at this time.
+We cannot extend this work to runtime variability analysis without further study.
+
+We devised our prototype to extract changes from a single large scale highly variable system, namely the Linux kernel. 
+In that sense, our study is tied to the technologies that are used to implement this system: the Kconfig language, 
+the Makefile system and the usage of code macros to support fine-grained variability.
+The models used for comparison do contain attributes that are very tightly related to the technology used in the Linux kernel.
+However, there are several other systems using those very same technologies, such as aXTLs\footnote{aXTLS: http://axtls.sourceforge.net/index.htm} and uClibc\footnote{uClibc: https://uclibc.org/}, on which our prototype 
+- and thus our approach - would be directly applicable.
+
+As mentioned in earlier this section, the heuristics used to identify feature names and usage in the different artefacts are based on development practices.
+For instance, in other systems, it is unlikely to find that feature names are prefixed like as they are in the context of the Linux kernel.
+Similarly, the association between features and file might not be achieved using Makefile, and even in this case, they are other ways to do so without the usage of lists as done in the kernel.
+The mechanisms used to implement variability in the system must be known in order to be able to apply a FEVER-like approach to analyze feature evolution.
+While they might differ wildy from system to system, we argue that such mechanisms exist and should be documented. Therefore, it should be possible to adapt the FEVER approach 
+for any type of systems.
+
+The amount of work required to do so will depend on what information is readily available (an explicit variability model for instance).
+If we consider another operating system such as eCos\footnote{eCos: http://ecos.sourceware.org/}, one would need to rebuild the same change model from features
+described in the CDL language\footnote{CDL : http://ecos.sourceware.org/ecos/docs-3.0/cdl-guide/reference.html} instead of Kconfig.
+Concretely, this amounts to creating a CDL parser capable to build the same EMF variability model representation used in this work to initiate the comparison process.
+Attributes such as default value, select, or visibility would be relevant, and the ``select'' attribute can simply be left empty.
+A similar effort would be necessary to consider systems using the Gradle build system\footnote{Gradle: https://gradle.org/}, rather than the Make system.
+However, the change model, based on an abstract representation of feature changes,
+should be sufficient to describe the evolution of highly variable systems, regardless of the implementation technology.
+Moreover, our work shows that model-based differencing is a suitable approach to extract feature related changes
+from heterogeneous artefacts in large scale systems.
+
+
+\subsection{Threats to Validity: Co-evolution of Artefacts in the Linux Kernel}
+We now consider the threats to the validity of our study of co-evolution
+of artefacts in feature evolution and authorship.
+
+\textit{Internal validity.}
+As mentioned in the previous section, the author names used in this experiment do contain aliases.
+A potential side effect is that more developers many in practice perform changes to multiple spaces 
+and this might not be reported in our results.
+However, our manual analysis on a single release revealed that few names (less than 5\%) could be identified as 
+aliases.
+A more in-depth study might identify more aliases, but the manual analysis we did covered most name variations
+taken into account in studies focusing on such problems \citep{kouters_whos_2012}. 
+The remaining variations were not considered as they did not occur in our sample.
+Because the number of aliases we found was small, and the percentage of developers not experiencing co-evolution is very
+high, we do not think that the presence of aliases would lead to a very different conclusion.
+
+As mentioned in the previous sections, the FEVER approach is not exact. 
+As a result, we can expect the actual co-evolution of artefacts and the ratio of developers
+dealing with co-evolution challenges to be slightly different from what is reported in this paper.
+However, our conclusions rely on significant trends observed over time (70\% of features evolved only through their implementation) and over 
+a long period of time (15 releases).
+Therefor, we argue that our conclusions hold despite the lack of exactness of the FEVER prototype.
+
+\textit{External validity.}
+The Linux kernel has been under development for more than two decades.
+This system is mature and has a well defined development process.
+This is observable in the regularity of our results over the studied time period.
+For less mature systems, one could expect feature-oriented co-evolution of artefacts to be 
+more prominent.
+This could be confirmed by applying the FEVER approach to the first releases of the Linux development
+or running a case-study on a newer system.
+Moreover, the ratio of co-evolution of artefacts for evolving features
+or the ratio of developers dealing with co-evolution in other systems may differ from what we 
+observed in the Linux kernel.
+Nonetheless, we argue that our results are representative of co-evolution for a long-lived highly variable system
+developed by a large team (more than a thousand developers).
+
+
+%%% BACKUP - COMPLETE CO-EVOLUTION TABLES - 1 Line
+% RESTORE THEM BY INSERTING THEM IN A table ENV.
+
+%\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r||r|r|}
+%\hline
+%Release	 			& 3.9 & 3.10 & 3.11 & 3.12 & 3.13 & 3.14 & 3.15 & 3.16 & 3.17 & 3.18 & 3.19 & 4.0 & 4.1 & 4.2 & 4.3 & Average & Median\\
+%\hline
+%Number of timelines	& 5208	& 4397	& 4424	& 4581	& 4503	& 4960	&4099	&4322	&3797	& 5131	& 3432 	& 4082	& 4316	&4159	&3967 & 4358	 & 4322\\
+%\hline
+%V.M. only			&654		&508		&909		&357		&390		&608		&462		&487		&337		&355		&330		&337		&406		&387		&330	 & 547,1 (10,44\%)	& 390 (9,40\%)\\
+%Mapping only 		&11		&9		&3		&15		&11		&7		&8		&3		&15		&3		&23		&11		&29		&1		&5		& 10,27 (0,2\%) & 9 (0,20\%)\\
+%Source only 			&3407	&2859	&2586	&3387	&3325	&3292	&2799	&2862	&2695	&3962	&2369	&2932	&2954	&2967	&2884	& 3019 (69,27\%) & 2932 (69,03\%)\\
+%\emph{Single space}			&\emph{4072}	&\emph{3376}	&\emph{3498}	&\emph{3759}	&\emph{3726}	&\emph{3907}	&\emph{3269}	&\emph{3352}	&\emph{3047}	&\emph{4320}	&\emph{2722}	&\emph{3280}	&\emph{3389}	&\emph{3355}	&\emph{3219}	&\emph{3486} & \emph{3376}\\
+%\emph{Single space (\%)}	&\emph{78,19	} &\emph{76,78}	&\emph{79,07	} &\emph{82,06}	&\emph{82,74}	&\emph{78,77}	&\emph{79,75}	&\emph{77,56}	&\emph{80,25}	&\emph{84,19	}&\emph{79,31}	&\emph{80,35}	&\emph{78,52	}&\emph{80,69}	&\emph{81,14}	& \emph{79,96} & \emph{79,75}\\
+%\hline
+%V.M. \& mapping 		&39		&22		&14		&20		&19		&15		&21		&33		&14		&9		&8		&17		&21		&14		&14	& 18,67 (0,45\%)	 & 17 (0,41\%)\\
+%V.M \&  source		&632		&549		&588		&453		&442		&522		&451		&450		&366		&428		&349		&415		&462		&449		&410	 & 467 (10,65\%)	& 450 (79,75\%)\\
+%source \& mapping	&54		&67		&56		&68		&65		&59		&76		&71		&50		&60		&63		&86		&91		&56		&71	& 66,2(1,51\%)	 & 65 (1,48\%)\\
+%\emph{Two spaces}			&\emph{725}		&\emph{638}		&\emph{658}		&\emph{541}		&\emph{526}		&\emph{596}		&\emph{548}		&\emph{554}		&\emph{430}		&\emph{497}		&\emph{420}		&\emph{518}&\emph{574}&\emph{519	}	&\emph{495}	& \emph{549,3} & \emph{541}	\\
+%\emph{Two spaces (\%)}		&\emph{13,92	}&\emph{14,51}&\emph{14,87}&\emph{11,81}&\emph{11,68}&\emph{12,02}	&\emph{13,37	}&\emph{12,82}&\emph{11,32}&\emph{9,69}&\emph{12,24}&\emph{12,69	}&\emph{13,30}&\emph{12,48}&\emph{12,48} & \emph{12,61} & \emph{12,48}\\
+%\hline
+%All spaces 			&411		&383		&268		&281		&251		&457		&282		&416		&320		&314		&290		&284		&353		&284		&253		& 323,1 & 290 \\
+%\emph{All spaces (\%)}		&\emph{7,89}	&\emph{8,71}	&\emph{6,06}	&\emph{6,13}	&\emph{5,57}	&\emph{9,21}	&\emph{6,88}	&\emph{9,63}	&\emph{8,43}	&\emph{6,12}	&\emph{8,45}	&\emph{6,96}	&\emph{8,18}	&\emph{6,83}	&\emph{6,38}	 & \emph{7,43} & \emph{6,95}\\
+%\hline
+%\end{tabular}
+
+
+
+%%% 
+%\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r||r|r|}
+%\hline
+%Release	 			& 3.9 & 3.10 & 3.11 & 3.12 & 3.13 & 3.14 & 3.15 & 3.16 & 3.17 & 3.18 & 3.19 & 4.0 & 4.1 & 4.2 & 4.3 & Average & Median \\
+%\hline
+%Number of authors	&1433	&1304	&1362	&1400	&1481	&1535	&1513	&1461	&1507	&1495	&1495	&1576	&1630	&1607	&1636 & 1495,67 & 1495,00 \\
+%\hline
+%V.M. only			&8	&6	&7	&10	&12	&11	&7	&5	&6	&20	&6	&12	&6	&7	&11	 & 8,93 (0,62\%) & 7,00 (0,52\%)\\
+%Mapping only 		&9	&7	&8	&5	&7	&18	&8	&21	&12	&15	&15	&14	&21	&16	&17 & 12,87 (0,88\%) & 14,00 (0,92\%)\\
+%Source only 			&1064	&960	&1071	&1043	&1101	&1152	&1163	&1069	&1116	&1085	&1121	&1181	&1195	&1251	&1210 & 1118,6 (77,24\%)& 1116,00	(77,49\%)\\
+%\emph{Single space}	&\emph{1081}	&\emph{973}	 &\emph{1086	}&\emph{1058	}&\emph{1120	}&\emph{1181	}&\emph{1178	}&\emph{1095	}&\emph{1134	}&\emph{1120	}&\emph{1142}&\emph{1207	}&\emph{1222	}&\emph{1274	}&\emph{1238	} & \emph{1140,60} & \emph{1134,00}\\
+%\emph{Single space (\%)}	&\emph{77,55}	&\emph{77,04}	&\emph{80,03}	&\emph{78,60	}&\emph{77,99}	&\emph{79,58}	&\emph{80,03	}&\emph{77,66}	&\emph{78,59}	&\emph{77,78	}&\emph{79,75}	&\emph{79,56	}&\emph{77,44}&\emph{80,08}&\emph{79,31} & \emph{78,73} & \emph{78,6} \\
+%\hline
+%V.M. \& mapping 		&2	&0	&2	&1	&0	&0	&0	&1	&4	&1	&2	&3	&1	&1	&2	& 1,33 (0,09\%)& 1,00 (0,07\%)\\
+%V.M \&  source		&77	&63	&78	&83	&81	&63	&70	&84	&75	&82	&73	&74	&78	&75	&86	& 76,13 (5,27\%)& 77,00 (4,85\%)\\
+%source \& mapping	&64	&62	&52	&61	&74	&77	&73	&63	&70	&80	&56	&79	&85	&71	&66	& 68,87 (4,75\%) & 70,00 (4,85\%)\\
+%\emph{Two spaces	}&\emph{143	}&\emph{125	}&\emph{132	}&\emph{145	}&\emph{155	}&\emph{140	}&\emph{143	}&\emph{148	}&\emph{149	}&\emph{163}	&\emph{131}	&\emph{156	}&\emph{164	}&\emph{147	}&\emph{154	} & \emph{146,33} & \emph{147} \\
+%\emph{Two spaces (\%)}		&\emph{10,26}	&\emph{9,90}	&\emph{9,73	}&\emph{10,77	}&\emph{10,79}	&\emph{9,43}	&\emph{9,71}	&\emph{10,50}	&\emph{10,33}	&\emph{11,32}	&\emph{9,15}	&\emph{10,28}	&\emph{10,39}	&\emph{9,24}	&\emph{9,87} & \emph{10,11} & \emph{10,26} \\
+%\hline
+%All spaces 			&170	&165	&139	&143	&161	&163	&151	&167	&160	&157	&159	&154&192	&170	&169	 & 161,33 & 161,00\\
+%\emph{All spaces (\%)}		&\emph{12,20}	&\emph{13,06	}&\emph{10,24}	&\emph{10,62}	&\emph{11,21}	&\emph{10,98}	&\emph{10,26	}&\emph{11,84}	&\emph{11,09}	&\emph{10,90}	&\emph{11,10}	&\emph{10,15}	&\emph{12,17}	&\emph{10,69}	&\emph{10,83} &\emph{11,16} & \emph{10,98}\\
+%\hline
+%\end{tabular}

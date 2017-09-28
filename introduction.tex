@@ -1,0 +1,124 @@
+%intro
+
+\section{Introduction}
+\label{sec:Introduction}
+%Highly configurable software and its goals
+\textit{Highly configurable software systems} allow end-users to tailor a system to suit their needs and expected operational context.
+This is achieved through the development of \textit{configurable} components, allowing systematic reuse and mass-customization \citep{van_gurp_notion_2001}.
+The benefits of such development strategies are to reduce the time to market, as mass-customization facilitates the creation of tailored solutions, and improved software quality, as re-used components are tested in various contexts \citep{clements_software_2002}.
+Examples of such systems can be found in various domains, such as database management \citep{rosenmuller_fame-dbms:_2008,batory_genesis:_1988}, SOA based systems \citep{kumara_sharing_2013}, 
+operating systems \citep{berger_variability_2010}, and a number\footnote{http://splc.net/fame.html}  of industrial
+and open source software projects \citep{liebig_analysis_2010} among which the Linux kernel may be the best known.
+
+% architecture of such system - specific characteristics
+A constraint of such a development strategy is the  fragmentation of concerns among development artefacts in such a 
+way that re-use and customization can be achieved.  
+Configuration options, or \textit{features}, play a significant role in a number of inter-related artefacts of different nature.
+For systems where variability is mostly resolved at build-time, features will play a role in, at least, the following three spaces \citep{neves_safe_2015,dietrich_understanding_2012}:  
+\begin{enumerate}
+\item \textit{the variability space} - describing available features and their allowed combinations; 
+\item the \textit{implementation space}, comprised of re-usable assets, among which configurable implementation artefacts;
+and finally
+\item the \textit{mapping space} - relating features to assets and often supported by a build system like Makefiles;  
+\end{enumerate}
+%Evolution challenges
+When such systems evolve, information about feature implementation across those three spaces is actively sought by engineers \citep{heider_case_2012}.
+Consistent co-evolution of artefacts is a necessity adding complexity to an already non-trivial evolutionary process \citep{mens_challenges_2005}, 
+occurring in both industrial \citep{hellebrand_coevolution_2014} and open-source contexts \citep{passos_coevolution_2015,hunsen_preprocessor-based_2015}.
+Inconsistent modifications across the three spaces (variability, mapping, and implementation) may lead 
+to the incapacity to derive products, code compilation errors, or dead code \citep{tartler_feature_2011,nadi_mining_2012,abal_42_2014}.
+
+%What we know / can do so far / interest.
+Recent studies \citep{passos_coevolution_2015,neves_safe_2015} described typical changes occurring in such systems,
+giving insight on how each space could evolve, and revealing the relationship between the various artefacts.
+In \citep{passos_dataset_2014}, Passos et al. proposed a dataset capturing the addition and removal of features.
+
+%What is currently not possible in the context of the challenges and w.r.t. what is possible today:
+%Manual approaches are not complete : we do not know what are the possible scenarios
+%Co-evolution in the large remain unknown: manual approach cannot provide overview or trends.
+Unfortunately, the most detailed change descriptions currently available \citep{passos_coevolution_2015,neves_safe_2015}
+were obtained using extensive \textit{manual} analysis of commits.
+Moreover, those studies focused on specific types of changes, such as addition and removal of features \citep{passos_coevolution_2015}, or product line refinement scenarios \citep{neves_safe_2015}. 
+Consequently, the set of co-evolution scenarios documented is limited, and, saved by performing a similar
+extensive manual analysis of a large number of commits, the identification of new scenarios remains difficult. 
+Finally, the current state of the art offers neither data nor methods to obtain information on 
+the prevalence of co-evolution in practice nor the frequency of those specific scenarios over a long period of time.
+
+%How this could be useful
+Such feature-related change information is important in various practical scenarios.
+\begin{itemize}
+\item (\textbf{S1}) A release manager is interested in finding out which commits participated
+in the creation of a feature, to build the release notes for instance. 
+In such cases, he would be interested in commits introducing the feature, 
+and the following ones, adjusting the behaviour of the feature.
+\item (\textbf{S2}) A developer introducing a new feature to a subsystem is interested in finding
+how similar features were supported by similar subsystems in the past. Then, (s)he needs to look for
+changes in those subsystems, involving that such features.
+\item (\textbf{S3}) During bug triage, a maintainer is searching for a developer who
+might be able to resolve a specific issue. The maintainer would then 
+be looking for developers with knowledge in the implementation on the possibly faulty
+features.
+\item (\textbf{S4}) Researchers focusing on feature-oriented evolution of systems are interested in 
+automatically identifying instances of co-evolution patterns or templates, or extending the existing pattern catalog presented by Passos et al.
+\citep{passos_coevolution_2015} and Neves et al. \citep{neves_safe_2015}
+\item (\textbf{S5}) Researchers working in the field bug prediction for highly configurable systems are
+interested in the relationship between variability changes and error-proneness.
+A database of detailed feature-related change information could facilitate their work.
+\end{itemize}
+Unfortunately, given the current state of the art, obtaining the necessary information require extensive manual analysis of changes
+and in-depth knowledge of the system under study.
+
+%Overview of the solution we propose and achieved targets
+We present in this paper the extension of FEVER (Feature EVolution ExtractoR) \citep{dintzner_fever:_2016}, 
+a tool-supported approach designed to automatically extract changes in commits affecting artefacts in all three spaces.
+FEVER retrieves the commits from a versioning system and rebuilds a model of each artefact before and after their modification. 
+Then it  extracts detailed information on the changes using graph differencing techniques.
+Finally, relying on naming conventions and heuristics the changes are aggregated based on the affected feature(s) across all commits in a release.
+The resulting data is then stored in a database relating the features and their evolution in each commit.
+
+We then manually compare the data obtained by FEVER and the commits as presented in the source control system
+to first evaluate the improvement in terms of change extraction accuracy obtained by the FEVER approach over its previous installment,
+and perform a second complete evaluation on a larger set of commits. We use this evaluation to answer the following research questions:
+\begin{itemize}
+\item RQ1: To what extent is the new version of FEVER more accurate in capturing feature-related changes?
+\item RQ2: To what extent does the new version FEVER data match changes performed by developers?
+\end{itemize}
+
+%Introduction to the study performed afterwards (extension)
+We use the resulting dataset to perform an exploratory study of feature evolution over 15 releases of the Linux kernel.
+We focus on the co-evolution of artefacts during feature evolution, in terms of affected spaces, under two different points of view: a feature perspective, focused on feature and the artefacts touched during their evolution, and an author-centric view, focused on commit authors and the spaces affected during maintenance operations.
+Using FEVER data, we aim at answering the following two research questions:
+\begin{itemize}
+\item RQ3: To what extent do artefact in different variability spaces co-evolve during the evolution of features?
+\item RQ4: To what extent are developers facing co-evolution over the course of a release?
+\end{itemize}
+
+While the tool we built to extract changes is centered on the Linux kernel, the approach itself is applicable to a larger set of systems \citep{berger_survey_2013,hunsen_preprocessor-based_2015}
+with an explicit variability model, where the implementation of variability is performed using annotative methods (pre-processor statements in our case), 
+and where the mapping between features and implementation assets can be recovered from the build system.
+
+%Key contributions of the work we did
+Through this paper, we make the following key contributions:
+(1) a model of feature-oriented co-evolving artefacts,
+(2) an approach to automatically extract instances of the model from commits,
+(3) a dataset of such change descriptions covering 15 recent releases of the Linux kernel history (3.10 to 4.4 in separate databases),
+(4) an evaluation of the accuracy of our heuristics showing that we can extract accurately the information out of 87\% of the commits,
+(5) we show that most (69.27\%) of features evolve solely through their implementation, and that a majority of authors do not touch other spaces than the implementation space.
+Finally, the tool and datasets used for this study are available on our website.\footnote{\url{http://swerl.tudelft.nl/bin/view/NicolasDintzner/}}
+
+This study is an extension of our previous work on co-evolution of artefacts in highly variable systems \citep{dintzner_fever:_2016}.
+In this paper, compared to \citep{dintzner_fever:_2016},
+we improved the model to better describe complex changes, with additional relationships between artefacts and information on artefact changes. 
+We also improved the heuristics use to capture changes, leading to a higher change extraction accuracy.
+We also extracted a larger dataset, comprised of more detailed changes and over a longer period of time.
+Finally, research questions RQ3 and RQ4, on the quantitative aspect of co-evolution, are entirely new
+to this work.
+
+We first provide background information on highly variable systems and the implementation of features in the Linux kernel in \secref{sec:background}.
+Then, we present the FEVER approach, its change meta-model and the change extraction process in \secref{sec:approach}.
+We evaluate our approach by first comparing the performance of FEVER with its previous version presented in \citep{dintzner_fever:_2016}, and then
+provide a complete evaluation, including new change attributes in \secref{sec:evaluation}.
+We show the usefulness of FEVER and the collected data in the aforementioned scenarios in \secref{sec:in_practice}.
+With the collected data, we perform an exploratory study of co-evolution occurrence in \secref{sec:coevolution}.
+We discuss our results and present the threats to the validity of our approach and complete study in \secref{sec:discussion}.
+Finally, we present related work in \secref{sec:related} and conclude our work in \secref{sec:conclusion}.

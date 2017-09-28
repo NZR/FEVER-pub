@@ -1,0 +1,418 @@
+
+\section{Evaluating FEVER with Linux}
+\label{sec:evaluation}
+
+The FEVER change extraction process is based on heuristics and assumptions about the structure of the artefacts. 
+Those heuristics affect the model build phase and the comparison process - the mapping between EMF model changes and higher-level
+feature oriented changes. 
+It is then important to evaluate whether the data captured by FEVER reflects the changes that are performed by developers
+in the source control system. 
+
+The objective is two-fold. First, we aim at evaluating how the changes to the heuristics impacted the accuracy of the FEVER approach.
+Secondly, we aim at providing a complete evaluation of the FEVER approach and its accuracy, 
+including all new change attributes, against a larger and more representative set of commits as before.
+
+Throughout this section, we consider that a FEVER change description is ``accurate'' if the changes
+performed by developers are captured correctly by FEVER as described in the previous section.
+We evaluate the accuracy of the approach in terms of precision and recall with respect to changes 
+performed by developers on the observed artefacts.
+
+With this work, we improved on the existing FEVER prototype \citep{dintzner_fever:_2016} in several ways.
+\secref{sec:approach} described the FEVER approach with its improvements.
+From the initial version of this work, we improved the following aspects of the approach:
+\begin{itemize}
+\item heuristics for code reference identification
+\item heuristics for code changes within modified code blocks
+\item heuristics for asset-feature mapping identification (compilation flag, default list, and artefact extensions management)
+\item the build change model to support more types of artefacts (namely data artefacts)
+\item the build change extraction to include artefact changes when describing mapping changes
+\item the timeline model to include ``influence updates'' on feature changes
+\end{itemize}
+
+With those changes, FEVER captures more information than before, and should be able
+to capture previous information more accurately. 
+This leads us to formulate the first research question driving this evaluation:
+\begin{framed}
+RQ1: To what extent is the new version of FEVER more accurate in capturing feature-related changes?
+\end{framed}
+
+However, the enhancements of FEVER also include the addition of new information regarding feature-related changes.
+The overall accuracy of the tool, should also be evaluated. We propose to answer the following research question:
+\begin{framed}
+RQ2: To what extent does the improved FEVER data match changes performed by developers?
+\end{framed}
+
+To assess whether the FEVER data matches the content of commits, we perform here a two-steps evaluation. 
+First, we apply FEVER on the commits used in \citep{dintzner_fever:_2016} and compare the results obtained
+during the first evaluation of FEVER and the improved algorithm. 
+Then, we perform a second, entirely new evaluation on two different releases using a different
+heuristic to select commits.
+
+For both steps, the evaluation is performed manually and consists in comparing the content of the FEVER database
+with changes performed by developers.
+We first present how this comparison is performed. Then, we present the results of the replication 
+of the evaluation and finally present the results of the evaluation on the new set of commits. 
+
+\subsection{Evaluation Method}
+
+The objective is to evaluate the accuracy of the heuristics and the model comparison process used for artefact change extraction 
+and the change consolidation process.
+To do so,  we manually compared the content of the FEVER dataset with the information that can be obtained from Git, using the GitK user interface.
+GitK provides a view of the list of changed files, the chunked of modified texts in each of them, with an adjustable number of lines of context for each chunk.
+The number of line of context provided for each chunk is particularly relevant for us since conditionally compiled code blocks can be large, and identifying in which block a change occurred may require a very large context (up to the complete file).
+The evaluation was performed by the main author of this paper.
+
+For a set of commits, we checked that the different \textbf{Edit} entities and their attributes can be explained by the changes observed in Git.
+Conversely, we ensured that feature-related changes seen in Git have a FEVER representation.
+
+To facilitate the evaluation, we first dump the FEVER representation of the selected commits in a file, containing all captured 
+information for those commits (all spaces, all files, all edit entities and their relationships). 
+We obtain this information simply by querying the FEVER database. 
+We then proceed with the comparison by types of artefacts - first by checking if all files seen as touched in FEVER are indeed touched in the commit, and we continue until all changes have been verified.
+
+At variability model level, we checked whether the features captured by FEVER as added, removed, or modified are indeed
+changed in a similar fashion in the Linux Kconfig files.
+We pay special attention to specific cases such as features being moved inside files - which may or may not result in actual changes to the feature,
+but surely are not addition nor removal scenarios and must be recorded by FEVER as a modification of an existing feature.
+
+Regarding mapping changes, we checked that the pairing of features and files is accurate and that the type of targeted artefact
+is also correct.
+Special consideration was given to the validation of the mapping between features and assets (artefacts or compilation flags).
+During the validation, we assess both which features are being mapped and what they are being mapped to. 
+Although we should note that a transformation associating a single feature to multiple different artefacts is recorded by FEVER
+as a three multiple associations, and are taken as such during the evaluation.
+
+The mapping between features and files may be the results of complex Makefile constructs and may 
+be distributed over several files through inclusion mechanism.
+FEVER only takes into account a number of such constructs as mentioned in \secref{sec:approach}, but not all possible ones.
+In cases where a mapping change can be observed in a Makefile, but FEVER does not report
+any change, we checked in the Makefile hierarchy if a feature should have been mapped to that change.
+If, during the manual inspection, we reached the root folder of the Linux file hierarchy and
+we have not encountered any explicit declaration of a link between the changed mapping and any feature, 
+we considered that this change could not have been mapped by FEVER, and FEVER should not report any feature-related mapping change.
+For instance, a developer modifies ``./mm/Makefile'' (memory management), and adds a compilation unit to the ``obj-y'' variable.
+We see that the inclusion of the file ``./mm/Makefile'' is not conditioned by any feature in the root ``./Makefile'' of the kernel source tree.
+Hence, we consider that FEVER cannot map this mapping change to any feature, and should not report it.
+During the evaluation, if an artefact is not assigned to a feature in FEVER and we cannot manually find
+which feature it should be assigned to following the methodology presented above, we consider that the FEVER output is correct.
+We emphasize that FEVER will still report that the Makefile has been touched in the form of a \textbf{ArtefactEdit},
+but no \textbf{MappingEdit} entity should be present.
+
+At the code level, we checked that the blocks seen as touched are indeed touched, and we compared the condition of each block.
+Then, by inspecting the patch, we validated that the code changes within the blocks were correct.
+
+Regarding \textbf{TimeLine} entities, we did not check whether all relevant changes in all commits were indeed gathered into \textbf{TimeLine} entities.
+We made the assumption that if \textbf{TimeLine} entities were properly linked in the commits we checked, then
+the algorithm is correct, and the check on the complete release is therefor unnecessary.
+We also kept track of the commits for which all extracted information is accurate, giving us an overview of the accuracy on a commit basis.
+
+
+
+\subsection{Replication}
+
+In our previous work \citep{dintzner_fever:_2016}, we evaluated our tool as follows.
+Using FEVER, we extracted feature changes from release 3.12 and 3.13 of the Linux kernel, and randomly extracted 150 commits from each release (out of 11,907 and 13,288 respectively).
+The selection of commits in those two releases was performed as follows:
+we randomly selected 50 commits touching at least the variability model, 50 among the commits touching  at least the mapping,
+and 50 touching at least source files.
+Those three sets are non-overlapping.
+So the creation of three different sets ensures that our random sample covers all three spaces.
+During the evaluation, we ignored merge and release tag commits.
+
+To evaluate our improved algorithm, we performed the same analysis over the same set of commits using the enhanced FEVER prototype and compared the
+results obtained with what was previously established. 
+\tabref{review_attrs} presents a comparison between the previous 
+precision and recall obtained on change attributes as well as the precision and recall for the new algorithm.
+
+
+\begin{table}[t]
+\centering
+\resizebox{\textwidth}{!}
+{
+\begin{tabular}{|l|r|r|r||r|r|r|}
+\hline
+& \multicolumn{3}{c|}{Reference algorithm \citep{dintzner_fever:_2016}} & \multicolumn{3}{c|}{Current algorithm} \\
+\hline
+Attribute & Sample & Precision (\%) & Recall (\%) & Sample & Precision (\%) & Recall (\%)\\
+\hline
+VM operations 							&  &  & & & & 					  		\\
+change: \textit{added} 					&  208 & 100 & 100 & 206 & 100  & 99		\\
+change: \textit{removed}					&  73  & 100 & 100 & 74  & 100  & 100	\\
+change: \textit{modified}				&  140 & 80  & 100 & 138 & 81.4 & 98.6	\\
+\hline
+Mapping operations						&  &  & & & & 							\\
+target: \textit{folder}					& 17 & 100 & 94 & 17 & 100 & 100			\\
+target: \textit{compilation unit}		& 437 & 100 & 98  & 430 & 100 & 99.8		\\
+target: \textit{compilation flag}		&  10 & 67 & 60 & 14 & 100  & 100		\\
+mapping change: \textit{added}	    		& 278 & 99  & 97 & 271 & 98.9 & 98.9		\\
+mapping change: \textit{removed}  		& 84 & 100 & 95 & 133 & 100 & 100		\\
+mapping change: \textit{modified} 		& 98 & 100  & 98 & 68 & 98.6 & 100		\\
+target change: \textit{added}			& 326 & 99  & 97 & 328 & 98.2 & 97.9		\\
+target change: \textit{removed}			& 133 & 100 & 97 & 139 & 100 & 100		\\
+\hline
+\textit{file-feature mapping} 			& 622  & 81  & 97 & 728 & 93.4 & 92.6	\\
+\hline
+Source operations						&  &  & & & & \\
+block change: \textit{added}				& 381 & 81 & 97 & 321 & 98.7 & 92.6 		\\
+block change: \textit{removed}			& 229 & 100 & 99 & 230 & 100 & 97.8 		\\
+block change: \textit{modified} 			& 237 & 97  & 99  & 233 & 96.3 & 100 	\\
+code change: \textit{added}  			& 365 & 99  & 97  & 307 & 99.0 & 98.4 	\\
+code change: \textit{removed}			& 195 & 99  & 99  & 190 & 96.4 & 98.4 	\\
+code change: \textit{edited}				& 237 & 96  & 99  & 236 & 95.9 & 100 	\\
+code change: \textit{preserved}			&  46 & 32  & 83  & 45  & 93.2 & 91.1	\\
+reference change: \textit{added}			& 6 & 100   & 83	  & 106  & 100 & 100		\\
+reference change: \textit{removed}		& 7 & 88    & 100 & 5 	 & 83.0 & 100	\\
+\hline
+TimeLine 								& 743 & 93 & 98  & 11225 & 95.5 & 97.5\\
+\hline
+\end{tabular}
+}
+\caption{Comparison of accuracy of the initial FEVER heuristics \citep{dintzner_fever:_2016} with its new version.}
+\label{review_attrs}
+\end{table}
+
+In addition to the information presented in the table, our evaluation showed that 
+the percentage of commits for which FEVER correctly extracted all change attributes
+increased from 82.7\% to 85.3\%.
+
+Let us first discuss the differences in terms of sample change between the two evaluations. 
+We note that between the two evaluations, few sample size are exactly the same.
+For instance, the first evaluation recorded 208 added features, but the second one found a total of 206. 
+The evaluation process being inherently manual, it is reasonable to observe slight differences (as in the variability model changes for instances).
+However, variation of sample size is more significant for the following attributes: 
+feature-file mapping, block changes added, added code, added references, and timelines. 
+Regarding the feature-file mapping, the new version of FEVER attempts to resolve the mapping of more files 
+- rather than focusing only on source code. 
+Previously, FEVER did not do so for files located within an ``include'' folder (at any level of its path).
+Changes to files in folder such as ``arch/.../include'' are now mapped.
+
+The variation in our sample of ``block changes: added blocks'' and ``code change: added code'' are related. 
+During the first evaluation, we found 381 added code blocks (block changes: added blocks) with 365 occurrences of new code blocks containing only new code (code change:added code),
+while during the second evaluation the number of added code blocks dropped to 321, and the number of code blocks with added code
+dropped to 307.
+The difference between the two values stems from changes obtained from a single commit. A file with the extension ``.S\_shipped'' containing
+a large number (60+) of added interactions was included in the initial evaluation. 
+We adjusted the algorithm to identify files, enforcing strict file extension (.S), hence the file was ignored
+during the second evaluation. This results in less added code blocks, and the less added code blocks containing only new code.
+While this raises the question of which artefacts one should consider during the experiment, it does not
+undermine the ability of FEVER to capture accurately code changes from within a well defined set of artefacts.
+
+The number of added references increased significantly between the two evaluations.
+Once again, explanation for this difference is contained within a single commit\footnote{206f060c21} where
+a hundred features are added, and then referenced in the code. During the first evaluation, 
+those references where incorrectly identified as local macros by the tool and the reviewer, and not noted as added references.
+During the second review, with the updated algorithm, the references were correctly identified by FEVER as feature references.
+A deeper analysis of the code and the related artefacts showed that those were indeed feature references
+and should be recorded as such.
+
+Finally, with the improved approach,\textbf{TimeLines} now may be created as the result of a feature relationship change.
+Since this was not taken into account during the first evaluation, the number of \textbf{TimeLines} obtained with the improved algorithm (11,225)
+is \textit{de facto} larger than during the first evaluation (743).
+The conditions under which we create \textbf{TimeLines} are presented in \secref{sec:timelines}. In that list, the points two and three, on
+feature relationship changes were previously not recorded. However, the 743 \textbf{TimeLines} initially recorded are a subset of the 11,225 
+\textbf{TimeLines} observed during the replication.
+
+Despite those differences, the results in \tabref{review_attrs} indicate improvement of the
+accuracy of most change attributes related to mapping and code changes.
+The most significant being the detection of preserved code inside changed code blocks (from a precision of 32\% to 93.2\%)
+and the detection of changes to compilation flags during mapping evolution (from a precision and recall of 67\% and 60\% to 100\%).
+Code change capture was improved by avoiding false positives when multiple code blocks were identical.
+The detection of compilation flag changes was improved by capturing changes to compilation flags not mapped ``directly'' to a feature, but indirectly (the flag is mapped to an internal variable and will be activated when a guard feature is selected).
+
+With this information we can answer our first research question, RQ1: To what extent is the new version of FEVER better at capturing feature-related changes?
+\begin{framed}
+The overall accuracy of FEVER slightly improved (by 2.6\%), while the ability to 
+capture certain change attributes increased significantly (by more than 30\%).
+
+The changes to the heuristics used by FEVER lead to an improvement over its previous version.
+\end{framed}
+
+While this increases our confidence in FEVER's ability to capture changes, the improved algorithm
+allowed us to capture change in artefacts and feature relationships 
+that were not taken into account before - hence, not covered in this comparison.
+Moreover, we used for this comparison the same set of randomly selected commits as in our previous work \citep{dintzner_fever:_2016}.
+However, the methodology used to build this set did not allow for commits not affecting any feature to be included
+in the evaluation, which, in our opinion created a bias in the initial evaluation. 
+We continue the evaluation of FEVER by performing a complete evaluation, including new attributes 
+on a more complete and different set of randomly selected commits.
+
+\subsection{Evaluation on a New Set of Commits}
+\label{sec:new_eval}
+The results of the previous sub-section highlight improvements on the ability of FEVER to capture certain types of changes.
+However, we extended the change model to capture additional change information, as presented in 
+the beginning of this section.
+
+To evaluate the improved FEVER algorithm, we extended the evaluation of the data used in the replication 
+presented above (300 commits) to cover the additional changes and created a new dataset from two releases using a different random selection approach (510 additional commits).
+For the additional dataset, instead of three groups of commits affecting different spaces, 
+we randomly selected commits from five different groups: 51 commits not affecting any artefact, 51 commits affecting arbitrary artefacts, 
+51 commits affecting at least the variability model, 51 commits affecting at least the mapping, and finally 51 commits affecting
+at least code blocks, for a total of 255 commits per release.
+With this approach, we ensure that every commit within the FEVER database may be selected.
+Consequently, the complete dataset used for this evaluation is comprised of 810 commits, from 4 different releases
+(150 commits from release 3.12, 150 commits from release 3.13, 255 commits from release 3.14, and 
+finally 255 commits from release 4.2).
+
+FEVER does not capture changes inside merges. The rationale behind this decision is to avoid
+capturing changes multiple times: once when they are implemented by their original authors, and 
+possibly a second time if the merge operation results in a conflict (same file modified twice).
+During our evaluation, we checked whether some information was missed by skipping merge commits altogether.
+We used the following methodology: we inspected a subset of the merge commits and checked that all changes that occurred can be
+found within the parent commits - i.e. all modifications pre-existed, they are simply integrated together.
+We identify ``new content'' in merge commits by using the following ``git log'' command to visualize the changes: 
+\begin{quote}
+git log <commit\_hash> -p --cc 
+\end{quote}
+
+The ``-p'' option displays the patch, and "-cc" displays the patch ``diff'' from all parents simultaneously.
+Using this view of the patch, we searched for content added or removed from all parents. 
+Practically, this amounts of searching for lines in the ``diff'' where the number of ``+'' or ``-'' symbols
+at the beginning of modified lines of text equals the number of parents.\footnote{https://git-scm.com/docs/git-log}
+Given that FEVER omits merge commits, any of such change is accounted for as a false negative for the relevant change attribute
+during the evaluation.
+\tabref{complete_review} summarizes the results for the 4 datasets, comprised of a total of 810 commits.
+
+\begin{table}[t]
+\centering
+\small
+{
+\begin{tabular}{|l|r|r|r|}
+\hline
+Attribute & Population & Precision (\%) & Recall (\%) \\
+\hline
+VM operations 							&  &  &   				\\
+change: \textit{added} 					&  309 & 100  & 98.7		\\
+change: \textit{removed}					&  88  & 100  & 98.9 	\\
+change: \textit{modified}				&  293 & 89.8 & 98.6		\\
+\hline
+Mapping operations						&  &  & 					\\
+target: \textit{folder}					& 52  & 100 & 98.1		\\
+target: \textit{compilation unit}		& 735 & 99.3 & 95.6 		\\
+target: \textit{compilation flag}		& 32  & 100 & 100 		\\
+target: \textit{data}					& 61  & 100 & 100 		\\
+mapping change: \textit{added}	    		& 506 & 98.4  & 95.1 	\\
+mapping change: \textit{removed}  		& 201 & 100 & 90.0 		\\
+mapping change: \textit{modified} 		& 180 & 97.7  & 92.8		\\
+target change: \textit{added}			& 644 & 98.7  & 94.6		\\
+target change: \textit{removed}			& 224 & 99,1 & 100		\\
+artefact change: \textit{added}	    		& 366 & 98.2  & 91.5		\\
+artefact change: \textit{removed}  		& 113 & 99.0 & 89.4		\\
+artefact change: \textit{modified} 		& 31 & 100  & 80.6		\\
+artefact change: \textit{untouched}   	& 290 & 88.7  & 92.4		\\
+artefact change: \textit{NA}   			& 82 & 100  & 98.8		\\
+
+\textit{file-feature mapping} 			& 1650  & 95.1  & 93.5	\\
+\hline
+Source operations						&  &  & \\
+block change: \textit{added}				& 656 & 99.4 & 93.5	 \\
+block change: \textit{removed}			& 355 & 100 & 97.2	 \\
+block change: \textit{modified} 			& 529 & 95.6  & 99.6	 \\
+code change: \textit{added}  			& 583 & 99.1  & 97.9	 \\
+code change: \textit{removed}			& 271 & 97.0  & 96.7	 \\
+code change: \textit{edited}				& 556 & 95.3  & 99.3	 \\
+code change: \textit{preserved}			&  124 & 95.7  & 88.7 \\
+reference change: \textit{added}			& 117 & 99.2   & 100  \\
+reference change: \textit{removed}		& 9 & 69.7    & 100   \\
+\hline
+TimeLine 								& 2367 & 97.1 & 97.5  \\
+\hline
+\hline
+Correct commits							& 810 & \multicolumn{2}{c|}{87.2\%} \\
+\hline
+\end{tabular}
+}
+\caption{FEVER change extraction accuracy evaluated on 810 commits}
+\label{complete_review}
+\end{table}
+
+The results show that, for a majority of attributes (26 out of 27), FEVER precision and recall is at least of 88\%.
+On the other hand, we note that detection of reference changes can be problematic.
+During this evaluation, we found two cases where developers created local variables
+(using the \#define C directive) whose name matched feature naming convention (CONFIG\_ prefix).
+This explains the lower precision, but FEVER still exhibit for this change a high recall of a 100\%  
+when capturing removals of feature references.
+
+If we compare the results obtained during the complete evaluation with the results obtained during the replication of our first evaluation, we note
+that, for a number of change attributes, the accuracy dropped by small yet noticeable amounts (for precision and recall alike).
+This is due to the increase in our sample size and a more thorough sampling approach. We considered for the complete evaluation a larger,
+more representative sets of commits in the Linux kernel as explained in \secref{sec:new_eval}.
+As we observe more changes, we see more commits containing changes deviating from what FEVER is able to parse.
+We can say that, given the increase in our sample and the a more balanced sampling techniques, this evaluation is more precise than what 
+we had provided in the past. 
+
+With this information we can now answer our second research question, RQ2: To what extent does the new version FEVER data match changes performed by developers?
+
+\begin{framed}
+The results showed that the data collected by the new version of FEVER matches the changes performed by developers in 87\% or more of the commits.
+The newly included change attributes (artefact changes, ``data'' artefact types) are captured with a high accuracy (of at least 80\%).
+\end{framed}
+
+Those results give us confidence on the viability of the FEVER approach, and in the quality of the extracted data.
+We proceed to explore usages of the dataset, before continuing with an exploratory study of co-evolution of artefacts
+in the context of feature evolution in \secref{sec:coevolution}.
+
+%\subsection{Discussion on FEVER Accuracy}
+%\label{sec:threats_fever}
+%
+%Before moving on to explore the data collected using the FEVER approach, let us discuss the 
+%accuracy and limitations of the approach itself.
+%
+%\textit{Limitations.}
+%Our evaluation shows that FEVER captures feature-related changes with a relatively high accuracy (87,2\% of commits extracted completely correctly).
+%However, FEVER does not capture all feature related information in all artefacts.
+%Because FEVER operates on a file-basis, with a text-based parser, certain constructs in the variability model or the mapping
+%are not captured. 
+%The limitations of FEVER for each space are mentioned in the relevant sub-sections of \secref{sec:approach}.
+%
+%\textit{Internal validity.}
+%To extract and analyze feature-related changes, FEVER uses model-based differencing techniques.
+%We first rebuild a model of each artefact, and then perform a comparison.
+%The construction of the model relies on heuristics, which themselves work based on assumptions on the structure of the touched artefacts - 
+%whether they be code, models, or mappings.
+%For this reason, information might be lost in the process.
+%To guarantee that the data extracted by FEVER do match what can be observed in commits, 
+%we performed a manual evaluation, covering change attributes our approach currently consider.
+%The evaluation showed that a large majority of the changes are captured accurately, with a precision and recall of at least 80\%.
+%This gives us confidence in the reliability of the data.
+%
+%Using manual analysis for validation purposes is inherently fault prone.
+%The difference in populations of changes observed between the initial and enhanced versions of the tool
+%does highlight this.
+%For this evaluation, the manual review of commits was performed twice - for the entire dataset, leaving a small
+%time gap (between 2 days and a week) between the two evaluation rounds.
+%While the errors identified in the initial evaluation lead to a significant update for some change attributes (namely ``added feature references'' in the code), evaluation errors occurred in less than 5\% of the commits.
+%
+%The evaluation of the new FEVER heuristics, compared to its previous version, highlights significant improvement of accuracy on specific change attributes. 
+%In particular the capture of code block changes with preserved code block improved from  a precision of 32\% to 93.3\%. 
+%Moreover, the added change attributes (namely artefact changes, additional artefact type, and \textbf{TimeLine} relationships to \textbf{FeatureEdit}) were captured with a good precision and recall (at least 80\%).
+%
+%Because the FEVER approach is based on heuristics, it is neither sound nor complete. 
+%But for more than 80\% of the extracted commits, the data does reflect changes performed by developers.
+%While this may be a limitation when searching for very specific changes, with specific change attributes, 
+%overall trends and statistics done over the course of a release reflect developer's activities on features in the Linux kernel
+%with sufficient accuracy to draw conclusions from it.
+%
+%\textit{External validity.}
+%We devised our prototype to extract changes from a single large scale highly variable system, namely the Linux kernel. 
+%In that sense, our study is tied to the technologies that are used to implement this system: the Kconfig language, 
+%the Makefile system and the usage of code macros to support fine-grained variability.
+%The models used for comparison do contain attributes that are very tightly related to the technology used in the Linux kernel.
+%However, there are several other systems using those very same technologies, such as aXTLs\footnote{aXTLS: http://axtls.sourceforge.net/index.htm} and uClibc\footnote{uClibc: https://uclibc.org/}, on which our prototype 
+%- and thus our approach - would be directly applicable.
+%
+%For other types of systems, one would need to adapt the model reconstruction phases depending on the system under study.
+%If we consider another operating system such as eCos\footnote{eCos: http://ecos.sourceware.org/}, one would need to rebuild the same change model from features
+%described in the CDL language\footnote{CDL : http://ecos.sourceware.org/ecos/docs-3.0/cdl-guide/reference.html} instead of Kconfig.
+%Concretely, this amounts to creating a CDL parser capable to build the same EMF variability model representation used in this work to initiate the comparison process.
+%Attributes such as default value, select, or visibility would be relevant, and the ``select'' attribute can simply be left empty.
+%A similar effort would be necessary to consider systems using the Gradle build system\footnote{Gradle: https://gradle.org/}, rather than the Make system.
+%However, the change model, based on an abstract representation of feature changes,
+%should be sufficient to describe the evolution of highly variable systems, regardless of the implementation technology.
+%Moreover, our work shows that model-based differencing is a suitable approach to extract feature related changes
+%from heterogeneous artefacts in large scale systems.
+%
+%Our work focuses on build-time variability, constructed around the build system and 
+%an annotative approach to fine-grained variability implementation (\#ifdef statements).
+%While we believe that the change model may be useful to describe runtime variability,
+%the extraction process is not suitable to extract feature mappings from the implementation itself at this time.
+%We cannot extend this work to runtime variability analysis without further study.
